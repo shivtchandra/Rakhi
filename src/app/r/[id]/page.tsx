@@ -23,7 +23,7 @@ const DEMO: RakhiConfig = {
   beadColor: "#F4C430",
   charm: "om",
   name: "Bhai",
-  message: "Happy Raksha Bandhan! No matter the distance, you're always my safest place. ❤️",
+  message: "Happy Raksha Bandhan. No matter the distance, you're always my safest place.",
 };
 
 export default function ReceivePage() {

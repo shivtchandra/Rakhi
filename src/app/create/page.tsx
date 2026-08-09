@@ -18,7 +18,7 @@ import { createRakhi } from "@/lib/rakhi";
 const STYLE_ICON: Record<RakhiStyle, string> = {
   traditional: "◉",
   minimal: "◡",
-  cute: "☺",
+  cute: "✿",
   premium: "♛",
 };
 const CHARM_ICON: Record<Charm, string> = {
@@ -105,17 +105,14 @@ function Stepper({ active }: { active: 1 | 2 | 3 }) {
 function Header() {
   return (
     <header className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto w-full">
-      <Link href="/" className="flex items-center gap-2.5">
-        <span className="text-2xl">🌸</span>
-        <span className="leading-tight">
-          <span className="block font-bold text-rose-800 text-lg">RakhiBox</span>
-          <span className="block text-[11px] text-rose-500">Design. Personalize. Send Love.</span>
-        </span>
+      <Link href="/" className="leading-tight">
+        <span className="block font-display text-2xl text-rose-900">Rakhi<span className="text-gold">Box</span></span>
+        <span className="block text-[11px] tracking-wide text-rose-500">Design. Personalise. Send.</span>
       </Link>
       <Stepper active={1} />
-      <button className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-rose-200 text-rose-700 text-sm px-4 py-2 hover:bg-rose-50">
-        ♡ My Creations
-      </button>
+      <Link href="/" className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-rose-200 text-rose-700 text-sm px-4 py-2 hover:bg-rose-50">
+        My Creations
+      </Link>
     </header>
   );
 }
@@ -126,7 +123,7 @@ export default function CreatePage() {
   const [beadColor, setBeadColor] = useState(DEFAULT_BEAD_COLOR);
   const [charm, setCharm] = useState<Charm>("om");
   const [name, setName] = useState("");
-  const [message, setMessage] = useState("Happy Rakhi bhai ❤️");
+  const [message, setMessage] = useState("Happy Rakhi, bhai.");
   const [submitting, setSubmitting] = useState(false);
   const [link, setLink] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -153,7 +150,7 @@ export default function CreatePage() {
       <div className="flex-1 flex flex-col bg-gradient-to-b from-amber-50 to-rose-50">
         <Header />
         <main className="flex-1 flex flex-col items-center justify-center gap-6 px-6 py-16 text-center">
-          <h1 className="text-2xl font-semibold text-rose-900">Your Rakhi is ready 🎁</h1>
+          <h1 className="font-display text-3xl text-rose-900">Your rakhi is ready</h1>
           <p className="text-rose-700/80">Share this link — it opens as a gift.</p>
           <div className="flex items-center gap-2 bg-white rounded-full px-4 py-2 shadow-sm border border-rose-100">
             <code className="text-sm text-rose-800 max-w-[60vw] truncate">{link}</code>
@@ -163,7 +160,7 @@ export default function CreatePage() {
           </div>
           <div className="flex gap-3">
             <a
-              href={`https://wa.me/?text=${encodeURIComponent(`I made you a rakhi online ❤️ ${link}`)}`}
+              href={`https://wa.me/?text=${encodeURIComponent(`I made you a rakhi. Open it on your phone: ${link}`)}`}
               target="_blank"
               rel="noreferrer"
               className="rounded-full bg-green-600 text-white px-6 py-2 text-sm font-medium hover:bg-green-700"
@@ -271,7 +268,7 @@ export default function CreatePage() {
                 value={message}
                 onChange={(e) => setMessage(e.target.value.slice(0, 200))}
                 rows={3}
-                placeholder="Happy Rakhi bhai ❤️"
+                placeholder="Happy Rakhi, bhai."
                 className="block w-full rounded-xl border border-gray-300 px-3 py-2.5 resize-none"
               />
               <span className="absolute bottom-2 right-3 text-[11px] text-gray-400">{message.length} / 200</span>
@@ -284,14 +281,14 @@ export default function CreatePage() {
               title="Coming soon"
               className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 text-gray-400 text-sm py-2.5 cursor-not-allowed"
             >
-              🎙 Add voice message
+              Add voice message
             </button>
             <button
               disabled
               title="Coming soon"
               className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 text-gray-400 text-sm py-2.5 cursor-not-allowed"
             >
-              🖼 Upload image/video
+              Upload image/video
             </button>
           </div>
 
@@ -303,7 +300,7 @@ export default function CreatePage() {
               disabled={submitting}
               className="w-full flex items-center justify-center gap-2 rounded-2xl bg-rose-700 text-white px-8 py-4 font-semibold hover:bg-rose-800 disabled:opacity-60 transition shadow-lg shadow-rose-700/20"
             >
-              🔗 {submitting ? "Creating…" : "Generate link"} ✨
+              {submitting ? "Creating…" : "Generate link"}
             </button>
             <p className="text-center text-xs text-rose-500/70 mt-2">You can preview and share on the next step</p>
           </div>

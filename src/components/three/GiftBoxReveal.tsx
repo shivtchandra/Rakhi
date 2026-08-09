@@ -139,7 +139,7 @@ export default function GiftBoxReveal({ rakhi }: { rakhi: RakhiConfig }) {
       {!play && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-end pb-24 gap-6 pointer-events-none">
           <p className="text-amber-100 text-lg drop-shadow">
-            {rakhi.name ? `${rakhi.name}, you` : "You"} received a Rakhi 🎁
+            {rakhi.name ? `${rakhi.name}, you` : "You"} received a rakhi
           </p>
           <button
             onClick={() => setPlay(true)}
