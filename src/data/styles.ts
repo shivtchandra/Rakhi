@@ -17,3 +17,6 @@ export const CHARMS: { id: Charm; label: string }[] = [
 
 export const DEFAULT_THREAD_COLOR = "#C0392B";
 export const DEFAULT_BEAD_COLOR = "#F4C430";
+
+export const THREAD_SWATCHES = ["#C0392B", "#E67E22", "#EC6F9E", "#9B59B6", "#3B7DD8", "#7BA05B"];
+export const BEAD_SWATCHES = ["#F4C430", "#E5E5E5", "#E8B4A0", "#2E7D5B", "#D9A7E0"];
