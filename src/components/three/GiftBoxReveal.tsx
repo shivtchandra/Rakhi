@@ -43,11 +43,12 @@ function Scene({ rakhi, play, onRevealed }: SceneProps) {
   const riser = useRef<THREE.Group>(null);
   const camera = useThree((s) => s.camera);
   const spinning = useRef(false);
-  const target = useRef(new THREE.Vector3(0, 0.7, 0));
+  const target = useRef(new THREE.Vector3(0, 0.95, 0));
 
   useFrame((state) => {
-    if (!play && boxGroup.current) {
-      boxGroup.current.position.y = Math.sin(state.clock.elapsedTime * 1.2) * 0.08;
+    if (!play) {
+      if (boxGroup.current) boxGroup.current.position.y = Math.sin(state.clock.elapsedTime * 1.2) * 0.08;
+      camera.lookAt(0, -0.7, 0); // deterministic idle framing (aim at box center)
     }
     if (spinning.current && riser.current) {
       riser.current.rotation.y += 0.01;
@@ -61,7 +62,7 @@ function Scene({ rakhi, play, onRevealed }: SceneProps) {
       hinge.current.rotation.x = -2.2;
       riser.current.position.y = 0.7;
       spinning.current = true;
-      camera.position.set(0, 0.8, 3.6);
+      camera.position.set(0, 0.95, 3.2);
       camera.lookAt(target.current);
       onRevealed();
       return;
@@ -76,7 +77,7 @@ function Scene({ rakhi, play, onRevealed }: SceneProps) {
     // 3. camera zooms toward the rakhi
     tl.to(
       camera.position,
-      { x: 0, y: 0.8, z: 3.6, duration: 2.0, ease: "power2.inOut", onUpdate: () => camera.lookAt(target.current) },
+      { x: 0, y: 0.95, z: 3.2, duration: 2.0, ease: "power2.inOut", onUpdate: () => camera.lookAt(target.current) },
       "<0.2"
     );
     // 4. message overlay fades in
@@ -88,7 +89,7 @@ function Scene({ rakhi, play, onRevealed }: SceneProps) {
   return (
     <>
       <SpotlightRig />
-      <group ref={boxGroup}>
+      <group ref={boxGroup} scale={1.4}>
         <GiftBox box={rakhi.threadColor} />
         {/* rakhi rises from inside; starts hidden below the rim */}
         <group ref={riser} position={[0, -0.7, 0]}>
@@ -124,13 +125,15 @@ export default function GiftBoxReveal({ rakhi }: { rakhi: RakhiConfig }) {
 
   return (
     <main className="flex-1 relative min-h-screen bg-gradient-to-b from-[#1a0d1a] via-[#2a1226] to-[#3a1a14] overflow-hidden">
-      <Canvas shadows dpr={[1, 2]} className="absolute inset-0">
-        <color attach="background" args={["#160a16"]} />
-        <PerspectiveCamera makeDefault position={[0, 1.5, 7]} fov={42} />
-        <Suspense fallback={null}>
-          <Scene rakhi={rakhi} play={play} onRevealed={() => setRevealed(true)} />
-        </Suspense>
-      </Canvas>
+      <div className="absolute inset-0">
+        <Canvas shadows dpr={[1, 2]} className="!h-full !w-full">
+          <color attach="background" args={["#160a16"]} />
+          <PerspectiveCamera makeDefault position={[0, -0.2, 4.5]} fov={46} />
+          <Suspense fallback={null}>
+            <Scene rakhi={rakhi} play={play} onRevealed={() => setRevealed(true)} />
+          </Suspense>
+        </Canvas>
+      </div>
 
       {/* landing overlay */}
       {!play && (
