@@ -1,5 +1,5 @@
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
+import { getFirestore, type Firestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -10,5 +10,22 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-export const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+/** True only when the public Firebase keys are actually filled in. */
+export function isFirebaseConfigured(): boolean {
+  return Boolean(
+    firebaseConfig.apiKey &&
+      firebaseConfig.projectId &&
+      firebaseConfig.appId &&
+      firebaseConfig.apiKey.length > 8
+  );
+}
+
+let app: FirebaseApp | null = null;
+let db: Firestore | null = null;
+
+if (isFirebaseConfigured()) {
+  app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  db = getFirestore(app);
+}
+
+export { app, db };

@@ -1,17 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import RakhiSVG from "@/components/RakhiSVG";
 import Reveal from "@/components/Reveal";
 import { STYLES, type RakhiStyle } from "@/data/styles";
 
-const RakhiScene = dynamic(() => import("@/components/three/RakhiScene"), { ssr: false });
-
 const STEPS = [
-  { n: "01", title: "Design", body: "Shape a kundan rakhi in 3D — thread, stones, charm, colour. It turns as you build." },
-  { n: "02", title: "Send", body: "Add a message and generate one private link. Share it on WhatsApp in seconds." },
-  { n: "03", title: "They open", body: "A gift box floats on their screen. One tap, and it opens into a moment." },
+  {
+    n: "01",
+    title: "Design",
+    body: "Shape a kundan rakhi in 3D: thread, stones, charm, colour. It turns as you build.",
+  },
+  {
+    n: "02",
+    title: "Send",
+    body: "Add a message and generate one private link. Share it on WhatsApp in seconds.",
+  },
+  {
+    n: "03",
+    title: "They open",
+    body: "A gift box floats on their screen. One tap, and it opens into a moment.",
+  },
 ];
 
 const STYLE_SUB: Record<RakhiStyle, string> = {
@@ -19,110 +28,108 @@ const STYLE_SUB: Record<RakhiStyle, string> = {
   minimal: "One clean line",
   cute: "Playful bead bloom",
   premium: "Gilded, dense stonework",
+  festive: "Dense petals, lacquer glow",
+  silk: "Soft thread fringe, green centerpiece",
+  rudraksha: "Sacred beads, copper accents",
+  silver: "Modern silver, blue enamel backing",
+  royal: "Majestic gold, dense outer petals",
 };
+
+const CHARMS = ["om", "heart", "initial", "gem", "om", "heart", "initial", "gem", "om"] as const;
 
 function Wordmark({ className = "" }: { className?: string }) {
   return (
     <span className={`font-display text-2xl tracking-tight ${className}`}>
-      Rakhi<span className="text-gold">Box</span>
+      Rakhi<span className="text-lacquer-bright">Box</span>
     </span>
   );
 }
 
 export default function Home() {
   return (
-    <div className="flex-1 bg-cream text-ink">
-      {/* ---- HERO (painterly festival + live 3D inset) ---- */}
-      <section className="relative bg-plum text-cream-ink overflow-hidden min-h-[94vh] flex flex-col">
-        {/* full-bleed painterly art */}
+    <div className="flex-1 bg-paper text-ink">
+      {/* 1. HERO - full-bleed image */}
+      <section className="relative bg-plum text-cream-ink overflow-hidden min-h-[100dvh] flex flex-col">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/hero-festival.png"
           alt=""
           aria-hidden
-          className="absolute inset-0 w-full h-full object-cover object-right"
+          className="absolute inset-0 w-full h-full object-cover object-[56%_center] scale-110 origin-center brightness-90"
         />
-        {/* scrims for legibility */}
-        <div className="absolute inset-0 bg-gradient-to-r from-plum via-plum/85 to-plum/10" />
-        <div className="absolute inset-0 bg-gradient-to-t from-plum via-transparent to-plum/50" />
+        {/* Soft left vignette only — smooth fade, no hard edge over the figures */}
+        <div
+          className="absolute inset-0 pointer-events-none bg-[linear-gradient(90deg,rgba(18,16,20,0.82)_0%,rgba(18,16,20,0.45)_14%,rgba(18,16,20,0.08)_28%,transparent_36%)]"
+          aria-hidden
+        />
+        <div
+          className="absolute inset-0 pointer-events-none bg-[linear-gradient(180deg,rgba(18,16,20,0.28)_0%,transparent_20%)]"
+          aria-hidden
+        />
 
-        <nav className="relative z-10 max-w-6xl mx-auto w-full flex items-center justify-between px-6 py-6">
-          <Wordmark className="text-cream-ink" />
-          <Link
-            href="/create"
-            className="text-sm tracking-wide text-cream-ink/80 gold-underline hover:text-cream-ink"
-          >
-            Design yours
-          </Link>
-        </nav>
+        <div className="relative z-10 page-shell flex flex-col flex-1 min-h-0">
+          <nav className="hero-shadow flex items-center justify-between py-5 h-16 shrink-0">
+            <Wordmark className="text-cream-ink" />
+            <Link
+              href="/create"
+              className="text-sm tracking-wide text-cream-ink/85 link-underline hover:text-cream-ink"
+            >
+              Design your rakhi
+            </Link>
+          </nav>
 
-        <div className="relative z-10 flex-1 max-w-6xl mx-auto w-full px-6 flex items-center">
-          <div className="max-w-2xl py-10">
-            <p className="text-xs tracking-[0.3em] uppercase text-gold mb-6">Raksha Bandhan</p>
-            <div className="hero-rise font-display leading-[0.95] text-[13vw] sm:text-6xl lg:text-7xl">
-              {["Not just", "a message.", "A moment."].map((l, i) => (
-                <div key={i} className="overflow-hidden">
-                  <div className={`line-inner ${i === 2 ? "italic text-gold-bright" : ""}`}>{l}</div>
-                </div>
-              ))}
-            </div>
-            <p className="mt-8 max-w-md text-cream-ink/80 leading-relaxed">
-              Design a rakhi in 3D and send a cinematic gift-box link your sibling opens on
-              their phone — the thread they can almost feel across any distance.
-            </p>
-            <div className="mt-10 flex flex-wrap items-center gap-6">
-              <Link
-                href="/create"
-                className="inline-block rounded-full bg-gold text-plum font-medium px-8 py-3.5 shadow-[0_6px_0_0_#8a6f2f] hover:translate-y-[3px] hover:shadow-[0_3px_0_0_#8a6f2f] active:translate-y-[6px] active:shadow-none transition-all"
-              >
-                Design your rakhi
-              </Link>
-              <span className="text-sm text-cream-ink/60">No sign-up. One link.</span>
+          <div className="flex-1 flex items-center pt-4 pb-16">
+            <div className="max-w-xl flex flex-col items-start text-left hero-shadow">
+              <p className="text-[10px] sm:text-xs tracking-[0.24em] sm:tracking-[0.28em] uppercase text-lacquer-bright mb-4 sm:mb-5 -ml-[0.14em]">
+                Raksha Bandhan
+              </p>
+              <div className="hero-rise font-display leading-[1.05] sm:leading-[1.1] text-[2.6rem] sm:text-6xl lg:text-7xl pb-1 w-full">
+                {["Not just a message.", "A moment."].map((l, i) => (
+                  <div key={l} className="overflow-hidden">
+                    <div className={`line-inner ${i === 1 ? "italic text-lacquer-bright" : ""}`}>
+                      {l}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-5 sm:mt-7 max-w-md text-cream-ink/80 leading-relaxed text-sm sm:text-base hidden sm:block">
+                Design a rakhi in 3D and send a gift-box link your sibling opens on their phone.
+              </p>
+              <div className="mt-7 sm:mt-9">
+                <Link href="/create" className="btn-pill">
+                  Design your rakhi
+                </Link>
+              </div>
             </div>
           </div>
         </div>
-
-        {/* live 3D inset — floating card, desktop only (perf) */}
-        <div className="hidden lg:block absolute z-10 bottom-10 right-8 w-[300px] h-[330px] rounded-2xl overflow-hidden ring-1 ring-gold/30 shadow-2xl bg-gradient-to-b from-plum-2 to-plum">
-          <div className="absolute inset-0">
-            <RakhiScene style="premium" threadColor="#7E2432" beadColor="#E4C878" charm="om" />
-          </div>
-          <span className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-plum/70 text-cream-ink text-[10px] font-semibold tracking-wide px-2.5 py-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-gold-bright" />
-            3D LIVE PREVIEW
-          </span>
-        </div>
-
-        <div className="relative z-10 h-px w-full bg-gradient-to-r from-transparent via-gold/40 to-transparent" />
       </section>
 
-      {/* ---- HOW IT WORKS ---- */}
-      <section className="max-w-6xl mx-auto w-full px-6 py-20 sm:py-28">
+      {/* 2. HOW IT WORKS - vertical numbered list */}
+      <section className="page-shell py-20 sm:py-28">
         <Reveal>
-          <p className="text-xs tracking-[0.3em] uppercase text-gold mb-3">How it works</p>
           <h2 className="font-display text-4xl sm:text-5xl max-w-xl leading-tight">
             Three steps, and the distance disappears.
           </h2>
         </Reveal>
-        <div className="mt-14 grid md:grid-cols-3 gap-px bg-ink/10">
+        <ol className="mt-14 max-w-3xl border-b border-ink/10">
           {STEPS.map((s, i) => (
-            <Reveal key={s.n} delay={i * 120} className="bg-cream">
-              <div className="px-2 md:px-8 py-6">
-                <div className="flex items-baseline gap-3">
-                  <span className="font-display text-2xl text-gold">{s.n}</span>
-                  <span className="h-px flex-1 bg-ink/15" />
+            <Reveal key={s.n} delay={i * 100}>
+              <li className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 py-8 border-t border-ink/10">
+                <span className="font-display text-3xl text-lacquer leading-none pt-1">{s.n}</span>
+                <div>
+                  <h3 className="font-display text-2xl sm:text-3xl">{s.title}</h3>
+                  <p className="mt-2 text-ink/65 leading-relaxed text-[15px] max-w-md">{s.body}</p>
                 </div>
-                <h3 className="font-display text-2xl mt-4">{s.title}</h3>
-                <p className="mt-3 text-ink/70 leading-relaxed text-[15px]">{s.body}</p>
-              </div>
+              </li>
             </Reveal>
           ))}
-        </div>
+        </ol>
       </section>
 
-      {/* ---- IMMERSIVE FESTIVAL BAND ---- */}
-      <section className="relative overflow-hidden border-y border-ink/10">
-        <div className="relative h-[58vh] min-h-[400px]">
+      {/* 3. FESTIVAL BAND - rounded banner card */}
+      <section className="page-shell py-8 sm:py-12">
+        <div className="relative h-[45vh] min-h-[320px] sm:h-[52vh] sm:min-h-[380px] rounded-[2rem] sm:rounded-[2.5rem] overflow-hidden shadow-lg shadow-lacquer/5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/rakhi-street.webp"
@@ -130,11 +137,11 @@ export default function Home() {
             aria-hidden
             className="absolute inset-0 w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-plum/90 via-plum/15 to-transparent" />
-          <div className="relative z-10 h-full max-w-6xl mx-auto px-6 flex items-end pb-12">
+          <div className="absolute inset-0 bg-gradient-to-t from-plum/85 via-plum/15 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-plum/40 via-transparent to-transparent" />
+          <div className="relative z-10 h-full flex items-end p-8 sm:p-12">
             <Reveal>
-              <p className="text-xs tracking-[0.3em] uppercase text-gold-bright mb-2 drop-shadow">Raksha Bandhan</p>
-              <h2 className="font-display text-4xl sm:text-5xl text-cream-ink max-w-xl leading-tight drop-shadow-lg">
+              <h2 className="font-display text-3xl sm:text-5xl text-cream-ink max-w-xl leading-tight drop-shadow-md">
                 A whole city, tying the same knot.
               </h2>
             </Reveal>
@@ -142,68 +149,76 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ---- FOUR STYLES ---- */}
-      <section className="bg-cream-2/60 border-y border-ink/10">
-        <div className="max-w-6xl mx-auto w-full px-6 py-20 sm:py-28">
+      {/* 4. STYLES */}
+      <section className="bg-paper-2 py-20 sm:py-28">
+        <div className="page-shell">
           <Reveal>
-            <p className="text-xs tracking-[0.3em] uppercase text-gold mb-3">The rakhis</p>
             <h2 className="font-display text-4xl sm:text-5xl max-w-xl leading-tight">
-              Four characters. Yours to shape.
+              Five styles. Yours to shape.
             </h2>
+            <p className="mt-4 max-w-lg text-ink/60 text-[15px] leading-relaxed">
+              Pick a starting point — thread, stones, and charm are all customisable in 3D.
+            </p>
           </Reveal>
-          <div className="mt-14 grid grid-cols-2 lg:grid-cols-4 gap-6">
+
+          <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
             {STYLES.map((s, i) => (
-              <Reveal key={s.id} delay={i * 100}>
-                <div className="group text-center">
-                  <div className="rounded-2xl bg-gradient-to-b from-white to-cream-2 border border-ink/5 p-6 shadow-sm transition-transform group-hover:-translate-y-1">
+              <Reveal key={s.id} delay={i * 60} className="h-full">
+                <Link
+                  href="/create"
+                  className="group soft-shell flex flex-col gap-4 p-6 h-full transition duration-200 hover:-translate-y-0.5 hover:border-lacquer/22 hover:shadow-[0_16px_48px_-20px_rgba(185,28,44,0.22)]"
+                >
+                  <div
+                    className="w-[4.5rem] h-[4.5rem] grid place-items-center rounded-full bg-white border border-lacquer/10 shadow-[0_8px_24px_-12px_rgba(18,16,20,0.12)] transition group-hover:border-lacquer/20"
+                  >
                     <RakhiSVG
                       style={s.id}
-                      threadColor="#7E2432"
-                      beadColor="#C4A052"
-                      charm={(["om", "heart", "initial", "gem"] as const)[i]}
+                      threadColor="#B91C2C"
+                      beadColor="#E4C878"
+                      charm={CHARMS[i]}
                       initial="R"
-                      className="w-full h-36"
+                      className="w-14 h-14"
                     />
                   </div>
-                  <h3 className="font-display text-xl mt-4">{s.label}</h3>
-                  <p className="text-sm text-ink/55">{STYLE_SUB[s.id]}</p>
-                </div>
+                  <div className="min-w-0">
+                    <h3 className="font-display text-2xl leading-tight">{s.label}</h3>
+                    <p className="text-sm text-ink/55 mt-1.5 leading-relaxed">{STYLE_SUB[s.id]}</p>
+                  </div>
+                </Link>
               </Reveal>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ---- THE MOMENT (dark band) ---- */}
+      {/* 5. THE MOMENT - dark cinematic */}
       <section className="bg-plum text-cream-ink">
-        <div className="max-w-4xl mx-auto w-full px-6 py-24 sm:py-32 text-center">
+        <div className="page-shell max-w-4xl py-24 sm:py-32 text-center">
           <Reveal>
-            <p className="text-xs tracking-[0.3em] uppercase text-gold mb-6">The unboxing</p>
-            <h2 className="font-display text-4xl sm:text-6xl leading-tight">
-              They don&apos;t read it. <span className="italic text-gold-bright">They open it.</span>
+            <h2 className="font-display text-4xl sm:text-6xl leading-[1.12] pb-1">
+              They don&apos;t read it.{" "}
+              <span className="italic text-lacquer-bright">They open it.</span>
             </h2>
             <p className="mt-8 max-w-xl mx-auto text-cream-ink/70 leading-relaxed">
-              A gift box floats in the dark. One tap — the lid lifts, the rakhi rises and turns
-              under a spotlight, and your message settles in. Slow, cinematic, made to be
-              replayed.
+              A gift box floats in the dark. One tap, the lid lifts, the rakhi rises under a
+              spotlight, and your message settles in.
             </p>
-            <Link
-              href="/create"
-              className="mt-10 inline-block rounded-full bg-gold text-plum font-medium px-8 py-3.5 shadow-[0_6px_0_0_#8a6f2f] hover:translate-y-[3px] hover:shadow-[0_3px_0_0_#8a6f2f] active:translate-y-[6px] active:shadow-none transition-all"
-            >
-              Make one now
+            <Link href="/create" className="btn-pill mt-10">
+              Design your rakhi
             </Link>
           </Reveal>
         </div>
       </section>
 
-      {/* ---- FOOTER ---- */}
+      {/* 6. FOOTER */}
       <footer className="bg-plum text-cream-ink/60 border-t border-cream-ink/10">
-        <div className="max-w-6xl mx-auto w-full px-6 py-10 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="page-shell py-10 flex flex-col sm:flex-row items-center justify-between gap-4">
           <Wordmark className="text-cream-ink" />
-          <p className="text-sm italic font-display text-cream-ink/70">Not just a message. A moment.</p>
-          <Link href="/create" className="text-sm gold-underline hover:text-cream-ink">
-            Design yours
+          <p className="text-sm italic font-display text-cream-ink/70">
+            Not just a message. A moment.
+          </p>
+          <Link href="/create" className="text-sm link-underline hover:text-cream-ink">
+            Design your rakhi
           </Link>
         </div>
       </footer>

@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import RakhiStage from "@/components/RakhiStage";
+import RakhiSVG from "@/components/RakhiSVG";
 import {
   STYLES,
   CHARMS,
@@ -13,14 +14,11 @@ import {
   type RakhiStyle,
   type Charm,
 } from "@/data/styles";
-import { createRakhi } from "@/lib/rakhi";
+import { createRakhi, isFirebaseConfigured } from "@/lib/rakhi";
+import { fileToDataUrl, MAX_SONG_BYTES } from "@/lib/songStore";
+import { toSpotifyEmbedUrl } from "@/lib/spotify";
 
-const STYLE_ICON: Record<RakhiStyle, string> = {
-  traditional: "◉",
-  minimal: "◡",
-  cute: "✿",
-  premium: "♛",
-};
+const STYLE_CHARMS: Charm[] = ["om", "heart", "initial", "gem", "om", "heart", "initial", "gem", "om"];
 const CHARM_ICON: Record<Charm, string> = {
   om: "ॐ",
   heart: "♥",
@@ -44,21 +42,23 @@ function Swatches({
       {colors.map((c) => (
         <button
           key={c}
+          type="button"
           onClick={() => onChange(c)}
           aria-label={c}
           style={{ background: c }}
-          className={`w-7 h-7 rounded-full ring-offset-2 transition ${
-            value === c ? "ring-2 ring-rose-600 scale-110" : "ring-1 ring-black/10"
+          className={`w-8 h-8 rounded-full ring-offset-2 ring-offset-paper transition ${
+            value === c ? "ring-2 ring-lacquer scale-110" : "ring-1 ring-ink/10"
           }`}
         >
           {value === c && <span className="text-white text-xs drop-shadow">✓</span>}
         </button>
       ))}
       <button
+        type="button"
         onClick={() => picker.current?.click()}
         style={isCustom ? { background: value } : undefined}
-        className={`w-7 h-7 rounded-full border border-dashed grid place-items-center text-rose-500 hover:border-rose-400 ${
-          isCustom ? "ring-2 ring-rose-600 text-white" : "border-rose-300"
+        className={`w-8 h-8 rounded-full border border-dashed grid place-items-center text-lacquer hover:border-lacquer ${
+          isCustom ? "ring-2 ring-lacquer text-white" : "border-lacquer/40"
         }`}
         aria-label="Custom color"
       >
@@ -75,45 +75,43 @@ function Swatches({
   );
 }
 
-function Stepper({ active }: { active: 1 | 2 | 3 }) {
-  const steps = ["Design", "Preview", "Share"];
+
+function Wordmark({ className = "" }: { className?: string }) {
   return (
-    <div className="hidden md:flex items-center gap-3 rounded-full bg-white shadow-sm border border-rose-100 px-4 py-2">
-      {steps.map((s, i) => {
-        const n = (i + 1) as 1 | 2 | 3;
-        const on = n === active;
-        return (
-          <div key={s} className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <span
-                className={`w-6 h-6 grid place-items-center rounded-full text-xs font-semibold ${
-                  on ? "bg-rose-700 text-white" : "bg-rose-50 text-rose-400"
-                }`}
-              >
-                {n}
-              </span>
-              <span className={`text-sm ${on ? "text-rose-900 font-semibold" : "text-rose-400"}`}>{s}</span>
-            </div>
-            {i < steps.length - 1 && <span className="w-6 h-px bg-rose-200" />}
-          </div>
-        );
-      })}
-    </div>
+    <span className={`font-display text-2xl tracking-tight ${className}`}>
+      Rakhi<span className="text-lacquer-bright">Box</span>
+    </span>
   );
 }
 
 function Header() {
   return (
-    <header className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto w-full">
-      <Link href="/" className="leading-tight">
-        <span className="block font-display text-2xl text-rose-900">Rakhi<span className="text-gold">Box</span></span>
-        <span className="block text-[11px] tracking-wide text-rose-500">Design. Personalise. Send.</span>
+    <header className="page-shell flex items-center justify-between py-5 h-16">
+      <Link href="/">
+        <Wordmark className="text-ink" />
       </Link>
-      <Stepper active={1} />
-      <Link href="/" className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-rose-200 text-rose-700 text-sm px-4 py-2 hover:bg-rose-50">
-        My Creations
+      <Link href="/" className="text-sm tracking-wide text-ink/70 link-underline hover:text-ink">
+        Home
       </Link>
     </header>
+  );
+}
+
+function Footer() {
+  return (
+    <footer className="bg-plum text-cream-ink/60 border-t border-cream-ink/10 mt-auto">
+      <div className="page-shell py-10 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <Link href="/">
+          <Wordmark className="text-cream-ink" />
+        </Link>
+        <p className="text-sm italic font-display text-cream-ink/70">
+          Not just a message. A moment.
+        </p>
+        <Link href="/" className="text-sm link-underline hover:text-cream-ink">
+          Home
+        </Link>
+      </div>
+    </footer>
   );
 }
 
@@ -124,9 +122,14 @@ export default function CreatePage() {
   const [charm, setCharm] = useState<Charm>("om");
   const [name, setName] = useState("");
   const [message, setMessage] = useState("Happy Rakhi, bhai.");
+  const [songName, setSongName] = useState<string | null>(null);
+  const [songDataUrl, setSongDataUrl] = useState<string | null>(null);
+  const [spotifyInput, setSpotifyInput] = useState("");
+  const [spotifyEmbedUrl, setSpotifyEmbedUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [link, setLink] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const songInput = useRef<HTMLInputElement>(null);
 
   async function handleGenerate() {
     if (!message.trim()) {
@@ -136,10 +139,20 @@ export default function CreatePage() {
     setError(null);
     setSubmitting(true);
     try {
-      const id = await createRakhi({ style, threadColor, beadColor, charm, name, message });
+      const id = await createRakhi({
+        style,
+        threadColor,
+        beadColor,
+        charm,
+        name,
+        message,
+        ...(songName && songDataUrl ? { songName, songDataUrl } : {}),
+        ...(spotifyEmbedUrl ? { spotifyEmbedUrl } : {}),
+      });
       setLink(`${window.location.origin}/r/${id}`);
-    } catch {
-      setError("Couldn't create your rakhi. Check Firebase setup and try again.");
+    } catch (err) {
+      console.error(err);
+      setError("Couldn't create your rakhi. Try again.");
     } finally {
       setSubmitting(false);
     }
@@ -147,70 +160,99 @@ export default function CreatePage() {
 
   if (link) {
     return (
-      <div className="flex-1 flex flex-col bg-gradient-to-b from-amber-50 to-rose-50">
+      <div className="flex-1 flex flex-col bg-paper">
         <Header />
-        <main className="flex-1 flex flex-col items-center justify-center gap-6 px-6 py-16 text-center">
-          <h1 className="font-display text-3xl text-rose-900">Your rakhi is ready</h1>
-          <p className="text-rose-700/80">Share this link — it opens as a gift.</p>
-          <div className="flex items-center gap-2 bg-white rounded-full px-4 py-2 shadow-sm border border-rose-100">
-            <code className="text-sm text-rose-800 max-w-[60vw] truncate">{link}</code>
-            <button onClick={() => navigator.clipboard.writeText(link)} className="text-xs font-medium text-rose-700 hover:text-rose-900">
+        <main className="page-shell flex-1 flex flex-col items-center justify-center gap-6 py-16 text-center">
+          <h1 className="font-display text-4xl sm:text-5xl text-ink leading-tight">Your rakhi is ready</h1>
+          <p className="text-[15px] text-ink/60 leading-relaxed">Share this link. It opens as a gift.</p>
+          {!isFirebaseConfigured() && (
+            <p className="text-xs text-ink/45 max-w-sm">
+              Saving on this computer for now (Firebase keys empty in .env.local). Links work while
+              this app is running; add Firebase for permanent cloud links.
+            </p>
+          )}
+          <div className="flex items-center gap-3 pill-shell px-5 py-3 shadow-sm max-w-full">
+            <code className="text-sm text-ink max-w-[55vw] truncate">{link}</code>
+            <button
+              type="button"
+              onClick={() => navigator.clipboard.writeText(link)}
+              className="shrink-0 rounded-full bg-lacquer text-white text-xs font-medium px-4 py-1.5 hover:bg-lacquer-deep"
+            >
               Copy
             </button>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap justify-center gap-3">
             <a
               href={`https://wa.me/?text=${encodeURIComponent(`I made you a rakhi. Open it on your phone: ${link}`)}`}
               target="_blank"
               rel="noreferrer"
-              className="rounded-full bg-green-600 text-white px-6 py-2 text-sm font-medium hover:bg-green-700"
+              className="rounded-full bg-[#25D366] text-white px-6 py-2.5 text-sm font-medium hover:brightness-95"
             >
               Share on WhatsApp
             </a>
-            <a href={link} className="rounded-full border border-rose-300 text-rose-700 px-6 py-2 text-sm font-medium hover:bg-rose-50">
+            <a
+              href={link}
+              className="rounded-full border border-lacquer/30 text-lacquer px-6 py-2.5 text-sm font-medium hover:bg-lacquer-soft"
+            >
               Preview it
             </a>
           </div>
         </main>
+        <Footer />
       </div>
     );
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-gradient-to-b from-rose-50/50 to-amber-50/50">
+    <div className="flex-1 flex flex-col bg-paper">
       <Header />
-      <main className="grid lg:grid-cols-2 gap-6 px-6 pb-10 max-w-7xl mx-auto w-full">
-        {/* preview */}
+      <main className="page-shell pb-10 pt-1 lg:pt-2">
+        <div className="grid lg:grid-cols-2 gap-6 lg:gap-8 items-start">
         <RakhiStage style={style} threadColor={threadColor} beadColor={beadColor} charm={charm} initial={name} />
 
-        {/* form */}
-        <div className="rounded-3xl bg-white/70 backdrop-blur border border-rose-100/60 shadow-lg p-6 sm:p-8 flex flex-col gap-6">
+        <div className="soft-shell p-6 sm:p-8 flex flex-col gap-7 shadow-[0_16px_48px_-20px_rgba(185,28,44,0.12)]">
           <div>
-            <h1 className="text-2xl font-bold text-rose-800">Design your Rakhi</h1>
-            <p className="text-sm text-rose-500 mt-1">Make it unique. Make it yours.</p>
+            <p className="text-xs tracking-[0.28em] uppercase text-lacquer-bright -ml-[0.14em]">Create</p>
+            <h1 className="font-display text-4xl sm:text-[2.75rem] leading-tight text-ink mt-3">Design your rakhi</h1>
+            <p className="mt-3 text-[15px] text-ink/60 leading-relaxed max-w-md">Thread, stones, charm, colour — it turns as you build.</p>
           </div>
 
           <div>
-            <label className="text-sm font-medium text-rose-900">Style</label>
-            <div className="grid grid-cols-2 gap-3 mt-2">
-              {STYLES.map((s) => {
+            <label className="text-xs font-medium tracking-[0.12em] uppercase text-ink/50">
+              Style
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+              {STYLES.map((s, i) => {
                 const on = style === s.id;
                 return (
                   <button
                     key={s.id}
+                    type="button"
                     onClick={() => setStyle(s.id)}
-                    className={`relative flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition ${
-                      on ? "border-rose-400 bg-rose-50/70 ring-1 ring-rose-200" : "border-gray-200 hover:border-rose-200"
+                    className={`flex items-center gap-3 rounded-[1.5rem] border p-4 text-left transition duration-200 ${
+                      on
+                        ? "border-lacquer/25 bg-white ring-1 ring-lacquer/20 shadow-[0_12px_36px_-16px_rgba(185,28,44,0.2)]"
+                        : "border-ink/10 bg-white/70 hover:border-lacquer/20 hover:-translate-y-0.5"
                     }`}
                   >
-                    <span className={`w-9 h-9 grid place-items-center rounded-full text-lg ${on ? "bg-rose-100 text-rose-700" : "bg-gray-100 text-gray-500"}`}>
-                      {STYLE_ICON[s.id]}
+                    <div
+                      className="w-14 h-14 shrink-0 grid place-items-center rounded-full bg-white border border-lacquer/10 shadow-sm"
+                    >
+                      <RakhiSVG
+                        style={s.id}
+                        threadColor="#B91C2C"
+                        beadColor="#E4C878"
+                        charm={STYLE_CHARMS[i]}
+                        initial="R"
+                        className="w-10 h-10"
+                      />
+                    </div>
+                    <span className="leading-tight min-w-0">
+                      <span className="block font-display text-lg leading-tight text-ink">
+                        {s.label}
+                      </span>
+                      <span className="block text-sm text-ink/55 mt-0.5">{s.blurb}</span>
                     </span>
-                    <span className="leading-tight">
-                      <span className={`block text-sm font-semibold ${on ? "text-rose-900" : "text-gray-800"}`}>{s.label}</span>
-                      <span className="block text-xs text-gray-500">{s.blurb}</span>
-                    </span>
-                    {on && <span className="absolute top-2 right-2 w-5 h-5 grid place-items-center rounded-full bg-rose-600 text-white text-[10px]">✓</span>}
                   </button>
                 );
               })}
@@ -219,26 +261,29 @@ export default function CreatePage() {
 
           <div className="grid grid-cols-2 gap-6">
             <div>
-              <label className="text-sm font-medium text-rose-900">Thread color</label>
+              <label className="text-xs font-medium tracking-[0.12em] uppercase text-ink/50">Thread color</label>
               <Swatches colors={THREAD_SWATCHES} value={threadColor} onChange={setThreadColor} />
             </div>
             <div>
-              <label className="text-sm font-medium text-rose-900">Bead color</label>
+              <label className="text-xs font-medium tracking-[0.12em] uppercase text-ink/50">Bead color</label>
               <Swatches colors={BEAD_SWATCHES} value={beadColor} onChange={setBeadColor} />
             </div>
           </div>
 
           <div>
-            <label className="text-sm font-medium text-rose-900">Charm</label>
-            <div className="grid grid-cols-4 gap-2 mt-2">
+            <label className="text-xs font-medium tracking-[0.12em] uppercase text-ink/50">Charm</label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
               {CHARMS.map((c) => {
                 const on = charm === c.id;
                 return (
                   <button
                     key={c.id}
+                    type="button"
                     onClick={() => setCharm(c.id)}
-                    className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm transition ${
-                      on ? "border-rose-400 bg-rose-50/70 text-rose-900 ring-1 ring-rose-200" : "border-gray-200 text-gray-700 hover:border-rose-200"
+                    className={`flex items-center justify-center gap-2 rounded-full border px-3 py-2.5 text-sm transition ${
+                      on
+                        ? "border-lacquer/25 bg-white text-ink ring-1 ring-lacquer/20 shadow-sm"
+                        : "border-ink/10 bg-white/70 text-ink/70 hover:border-lacquer/20"
                     }`}
                   >
                     <span className="text-base">{CHARM_ICON[c.id]}</span>
@@ -251,61 +296,160 @@ export default function CreatePage() {
 
           {charm === "initial" && (
             <div>
-              <label className="text-sm font-medium text-rose-900">Initial</label>
+              <label className="text-xs font-medium tracking-[0.12em] uppercase text-ink/50" htmlFor="initial">
+                Initial
+              </label>
               <input
+                id="initial"
                 value={name}
                 onChange={(e) => setName(e.target.value.slice(0, 1))}
                 maxLength={1}
-                className="block mt-2 w-16 rounded-lg border border-gray-300 px-3 py-2"
+                className="block mt-2 w-16 rounded-full border border-ink/15 px-3 py-2 text-center bg-white focus:outline-none focus:ring-2 focus:ring-lacquer/30"
               />
             </div>
           )}
 
+
           <div>
-            <label className="text-sm font-medium text-rose-900">Message</label>
+            <label className="text-xs font-medium tracking-[0.12em] uppercase text-ink/50">Song (optional</label>
+            <p className="text-xs text-ink/45 mt-0.5">
+              Paste a Spotify link, or attach an audio file. Plays when they open the gift.
+            </p>
+            <div className="mt-2 flex flex-col gap-3">
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={spotifyInput}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSpotifyInput(value);
+                    const embed = toSpotifyEmbedUrl(value);
+                    if (embed) {
+                      setSpotifyEmbedUrl(embed);
+                      setSongName(null);
+                      setSongDataUrl(null);
+                      setError(null);
+                    } else if (value.trim()) {
+                      setSpotifyEmbedUrl(null);
+                    } else {
+                      setSpotifyEmbedUrl(null);
+                    }
+                  }}
+                  onBlur={() => {
+                    if (spotifyInput.trim() && !toSpotifyEmbedUrl(spotifyInput)) {
+                      setError("That does not look like a Spotify song link.");
+                    }
+                  }}
+                  className="flex-1 min-w-0 rounded-full border border-ink/15 px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-lacquer/30"
+                  aria-label="Spotify song link"
+                />
+                {spotifyEmbedUrl && (
+                  <button
+                    type="button"
+                    aria-label="Clear Spotify link"
+                    onClick={() => {
+                      setSpotifyInput("");
+                      setSpotifyEmbedUrl(null);
+                    }}
+                    className="shrink-0 rounded-full border border-ink/10 text-ink/50 px-3 hover:text-lacquer"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+              {spotifyEmbedUrl && (
+                <p className="text-xs text-lacquer">Spotify track ready</p>
+              )}
+
+              <div className="flex flex-wrap items-center gap-3">
+                <input
+                  ref={songInput}
+                  type="file"
+                  accept="audio/mpeg,audio/mp4,audio/aac,audio/wav,audio/*"
+                  className="sr-only"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = "";
+                    if (!file) return;
+                    if (file.size > MAX_SONG_BYTES) {
+                      setError("Song is too large. Keep it under 2.5 MB.");
+                      return;
+                    }
+                    try {
+                      const dataUrl = await fileToDataUrl(file);
+                      setSongName(file.name);
+                      setSongDataUrl(dataUrl);
+                      setSpotifyInput("");
+                      setSpotifyEmbedUrl(null);
+                      setError(null);
+                    } catch {
+                      setError("Couldn't read that audio file.");
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => songInput.current?.click()}
+                  className="rounded-full border border-lacquer/30 text-lacquer text-sm px-4 py-2 hover:bg-lacquer-soft"
+                >
+                  {songName ? "Change file" : "Or attach a file"}
+                </button>
+                {songName && (
+                  <span className="inline-flex items-center gap-2 rounded-full bg-lacquer-soft text-ink text-sm px-3 py-1.5 max-w-full">
+                    <span className="truncate max-w-[12rem]">{songName}</span>
+                    <button
+                      type="button"
+                      aria-label="Remove song file"
+                      onClick={() => {
+                        setSongName(null);
+                        setSongDataUrl(null);
+                      }}
+                      className="text-lacquer font-semibold leading-none"
+                    >
+                      ×
+                    </button>
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium tracking-[0.12em] uppercase text-ink/50" htmlFor="message">
+              Message
+            </label>
             <div className="relative mt-2">
               <textarea
+                id="message"
                 value={message}
                 onChange={(e) => setMessage(e.target.value.slice(0, 200))}
                 rows={3}
                 placeholder="Happy Rakhi, bhai."
-                className="block w-full rounded-xl border border-gray-300 px-3 py-2.5 resize-none"
+                className="block w-full rounded-[1.25rem] border border-ink/15 px-4 py-3 resize-none bg-white focus:outline-none focus:ring-2 focus:ring-lacquer/30"
               />
-              <span className="absolute bottom-2 right-3 text-[11px] text-gray-400">{message.length} / 200</span>
+              <span className="absolute bottom-2.5 right-4 text-[11px] text-ink/35">
+                {message.length} / 200
+              </span>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              disabled
-              title="Coming soon"
-              className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 text-gray-400 text-sm py-2.5 cursor-not-allowed"
-            >
-              Add voice message
-            </button>
-            <button
-              disabled
-              title="Coming soon"
-              className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 text-gray-400 text-sm py-2.5 cursor-not-allowed"
-            >
-              Upload image/video
-            </button>
-          </div>
-
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-lacquer">{error}</p>}
 
           <div>
             <button
+              type="button"
               onClick={handleGenerate}
               disabled={submitting}
-              className="w-full flex items-center justify-center gap-2 rounded-2xl bg-rose-700 text-white px-8 py-4 font-semibold hover:bg-rose-800 disabled:opacity-60 transition shadow-lg shadow-rose-700/20"
+              className="btn-pill w-full"
             >
-              {submitting ? "Creating…" : "Generate link"}
+              {submitting ? "Creating..." : "Generate link"}
             </button>
-            <p className="text-center text-xs text-rose-500/70 mt-2">You can preview and share on the next step</p>
+
           </div>
         </div>
+        </div>
       </main>
+      <Footer />
     </div>
   );
 }

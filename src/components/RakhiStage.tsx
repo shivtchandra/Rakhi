@@ -52,17 +52,22 @@ function TrustIcon({ name }: { name: IconName }) {
       </>
     ),
   };
-  return <svg {...common} aria-hidden>{paths[name]}</svg>;
+  return (
+    <svg {...common} aria-hidden>
+      {paths[name]}
+    </svg>
+  );
 }
 
 function CtrlButton({ label, icon, onClick }: { label: string; icon: string; onClick: () => void }) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      className="flex flex-col items-center gap-1 rounded-xl bg-white/80 backdrop-blur px-2.5 py-2 shadow-sm hover:bg-white transition-colors"
+      className="flex flex-col items-center gap-1 rounded-full bg-white/90 backdrop-blur px-3 py-2.5 shadow-sm hover:bg-white transition-colors border border-lacquer/10"
     >
-      <span className="text-rose-700 text-lg leading-none">{icon}</span>
-      <span className="text-[10px] font-medium text-rose-900/70">{label}</span>
+      <span className="text-lacquer text-lg leading-none">{icon}</span>
+      <span className="text-[10px] font-medium text-ink/60">{label}</span>
     </button>
   );
 }
@@ -71,33 +76,27 @@ export default function RakhiStage(props: Props) {
   const scene = useRef<RakhiSceneHandle>(null);
   const [ready, setReady] = useState(false);
 
-  // Mount the canvas only after the client is up (three cannot SSR); fade it in.
   useEffect(() => setReady(true), []);
 
   return (
-    <div className="relative rounded-3xl overflow-hidden shadow-lg border border-rose-100/60 flex flex-col">
-      {/* festive backdrop */}
-      <div className="absolute inset-0 bg-gradient-to-br from-amber-100 via-rose-100 to-amber-50" />
-      <div className="absolute -top-16 -left-10 w-56 h-56 rounded-full bg-rose-300/40 blur-3xl" />
-      <div className="absolute bottom-10 right-0 w-64 h-64 rounded-full bg-amber-300/40 blur-3xl" />
-      <div className="absolute top-1/3 left-1/2 w-40 h-40 rounded-full bg-white/50 blur-2xl" />
+    <div className="relative soft-shell overflow-hidden shadow-lg shadow-lacquer/10 flex flex-col min-h-[360px] sm:min-h-[520px]">
+      <div className="absolute inset-0 bg-gradient-to-br from-lacquer-soft via-paper to-paper-2" />
+      <div className="absolute -top-16 -left-10 w-56 h-56 rounded-full bg-lacquer/15 blur-3xl" />
+      <div className="absolute bottom-10 right-0 w-64 h-64 rounded-full bg-lacquer-bright/12 blur-3xl" />
 
-      {/* badge */}
       <div className="relative z-10 p-5">
-        <span className="inline-flex items-center gap-2 rounded-full bg-maroon text-cream-ink text-xs font-semibold tracking-wide px-3 py-1.5 shadow">
-          <span className="w-1.5 h-1.5 rounded-full bg-gold-bright" />
+        <span className="inline-flex items-center gap-2 rounded-full bg-lacquer text-cream-ink text-xs font-semibold tracking-wide px-3.5 py-1.5 shadow">
+          <span className="w-1.5 h-1.5 rounded-full bg-white" aria-hidden />
           3D LIVE PREVIEW
         </span>
       </div>
 
-      {/* controls */}
       <div className="absolute z-20 left-5 top-1/2 -translate-y-1/2 flex flex-col gap-2">
         <CtrlButton label="Rotate" icon="⟳" onClick={() => scene.current?.toggleSpin()} />
         <CtrlButton label="Zoom" icon="⌕" onClick={() => scene.current?.zoomStep()} />
         <CtrlButton label="Reset" icon="⟲" onClick={() => scene.current?.reset()} />
       </div>
 
-      {/* stage: SVG paints instantly, 3D canvas fades in over it once ready */}
       <div className="relative z-10 flex-1 min-h-[360px]">
         <div
           className={`absolute inset-0 flex items-center justify-center px-6 pointer-events-none transition-opacity duration-500 ${
@@ -113,21 +112,21 @@ export default function RakhiStage(props: Props) {
         )}
       </div>
 
-      {/* hint */}
       <div className="relative z-10 flex justify-center pb-4">
-        <span className="rounded-full bg-white/85 backdrop-blur text-ink/60 text-xs tracking-wide px-4 py-2 shadow-sm">
+        <span className="rounded-full bg-white/90 backdrop-blur text-ink/55 text-xs tracking-wide px-4 py-2 shadow-sm border border-lacquer/10">
           Drag to rotate · scroll to zoom
         </span>
       </div>
 
-      {/* trust row */}
-      <div className="relative z-10 grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white/70 backdrop-blur px-5 py-4 border-t border-rose-100/60">
+      <div className="relative z-10 grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white/80 backdrop-blur px-5 py-4 border-t border-lacquer/10">
         {TRUST.map((t) => (
-          <div key={t.title} className="flex items-start gap-2 text-maroon">
-            <span className="mt-0.5"><TrustIcon name={t.icon} /></span>
+          <div key={t.title} className="flex items-start gap-2 text-lacquer">
+            <span className="mt-0.5">
+              <TrustIcon name={t.icon} />
+            </span>
             <div className="leading-tight">
               <div className="text-[11px] font-semibold text-ink">{t.title}</div>
-              <div className="text-[10px] text-ink/60">{t.sub}</div>
+              <div className="text-[10px] text-ink/55">{t.sub}</div>
             </div>
           </div>
         ))}

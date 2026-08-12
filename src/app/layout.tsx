@@ -1,20 +1,25 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Inter } from "next/font/google";
+import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
-const cormorant = Cormorant_Garamond({
+const fraunces = Fraunces({
   variable: "--font-display",
-  weight: ["400", "500", "600", "700"],
   subsets: ["latin"],
 });
 
-const inter = Inter({
+const jakarta = Plus_Jakarta_Sans({
   variable: "--font-body",
   subsets: ["latin"],
 });
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export const metadata: Metadata = {
-  title: "RakhiBox — Not just a message. A moment.",
+  title: "RakhiBox - Not just a message. A moment.",
   description:
     "Design a kundan rakhi in 3D and send a cinematic gift-box experience your sibling opens on their phone.",
 };
@@ -23,7 +28,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${cormorant.variable} ${inter.variable} h-full antialiased`}
+      className={`${fraunces.variable} ${jakarta.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

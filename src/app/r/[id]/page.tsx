@@ -9,8 +9,8 @@ import { getRakhi, type RakhiConfig } from "@/lib/rakhi";
 const GiftBoxReveal = dynamic(() => import("@/components/three/GiftBoxReveal"), {
   ssr: false,
   loading: () => (
-    <main className="flex-1 flex items-center justify-center bg-[#160a16]">
-      <p className="text-amber-100">Preparing your gift…</p>
+    <main className="flex-1 flex items-center justify-center bg-plum min-h-[100dvh]">
+      <p className="text-cream-ink/80">Preparing your gift...</p>
     </main>
   ),
 });
@@ -40,18 +40,18 @@ export default function ReceivePage() {
 
   if (rakhi === undefined) {
     return (
-      <main className="flex-1 flex items-center justify-center bg-[#160a16]">
-        <p className="text-amber-100">Loading your rakhi…</p>
+      <main className="flex-1 flex items-center justify-center bg-plum min-h-[100dvh]">
+        <p className="text-cream-ink/80">Loading your rakhi...</p>
       </main>
     );
   }
 
   if (rakhi === null) {
     return (
-      <main className="flex-1 flex flex-col items-center justify-center gap-4 bg-[#160a16] text-center px-6">
-        <p className="text-amber-100">This rakhi link doesn&apos;t exist.</p>
-        <Link href="/create" className="text-amber-300 underline">
-          Create your own
+      <main className="flex-1 flex flex-col items-center justify-center gap-4 bg-plum min-h-[100dvh] text-center px-6">
+        <p className="text-cream-ink/80">This rakhi link doesn&apos;t exist.</p>
+        <Link href="/create" className="btn-pill">
+          Design your rakhi
         </Link>
       </main>
     );

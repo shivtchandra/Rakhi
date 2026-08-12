@@ -1,11 +1,25 @@
-export type RakhiStyle = "traditional" | "minimal" | "cute" | "premium";
+export type RakhiStyle =
+  | "traditional"
+  | "minimal"
+  | "cute"
+  | "premium"
+  | "festive"
+  | "silk"
+  | "rudraksha"
+  | "silver"
+  | "royal";
 export type Charm = "om" | "heart" | "initial" | "gem";
 
 export const STYLES: { id: RakhiStyle; label: string; blurb: string }[] = [
-  { id: "traditional", label: "Traditional Thread", blurb: "Classic woven look" },
+  { id: "traditional", label: "Traditional Thread", blurb: "Kundan flower, red enamel" },
   { id: "minimal", label: "Minimal Modern", blurb: "Clean, single-line" },
   { id: "cute", label: "Cute & Fun", blurb: "Playful, rounded beads" },
   { id: "premium", label: "Premium Gold", blurb: "Metallic shine accent" },
+  { id: "festive", label: "Festive Lacquer", blurb: "Dense petals, bright beads" },
+  { id: "silk", label: "Floral Silk", blurb: "Soft thread fringe, emerald center" },
+  { id: "rudraksha", label: "Earthy Rudraksha", blurb: "Sacred beads, copper accents" },
+  { id: "silver", label: "Chic Silver", blurb: "Sterling silver, blue enamel backing" },
+  { id: "royal", label: "Royal Zardosi", blurb: "Majestic gold, dense outer petals" },
 ];
 
 export const CHARMS: { id: Charm; label: string }[] = [

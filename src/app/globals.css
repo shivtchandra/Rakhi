@@ -1,26 +1,47 @@
 @import "tailwindcss";
 
 :root {
-  --plum: #170e16;
-  --plum-2: #241019;
-  --cream: #fbf4e9;
-  --cream-2: #f3e7d4;
-  --ink: #241019;
-  --cream-ink: #f4e8d6;
-  --gold: #c4a052;
-  --gold-bright: #e4c878;
-  --maroon: #7e2432;
-  --rose: #b14a57;
+  /* Accent locked: festival lacquer red */
+  --lacquer: #b91c2c;
+  --lacquer-deep: #8f1422;
+  --lacquer-bright: #e23a48;
+  --lacquer-soft: #f3e4e6;
 
-  --background: var(--cream);
+  /* Cool monochrome bases (not warm cream) */
+  --paper: #f5f3f1;
+  --paper-2: #ece8e6;
+  --ink: #121014;
+  --plum: #121014;
+  --plum-2: #1c161a;
+  --cream-ink: #f5f3f1;
+
+  /* 3D ribbon trim only - never UI chrome */
+  --gold: #d9a93e;
+  --gold-bright: #e4c878;
+
+  /* Legacy aliases */
+  --cream: var(--paper);
+  --cream-2: var(--paper-2);
+  --maroon: var(--lacquer);
+  --rose: var(--lacquer-bright);
+
+  --background: var(--paper);
   --foreground: var(--ink);
+  --radius-pill: 9999px;
+  --radius-shell: 2rem;
 }
 
 @theme inline {
+  --color-lacquer: var(--lacquer);
+  --color-lacquer-deep: var(--lacquer-deep);
+  --color-lacquer-bright: var(--lacquer-bright);
+  --color-lacquer-soft: var(--lacquer-soft);
   --color-plum: var(--plum);
   --color-plum-2: var(--plum-2);
   --color-cream: var(--cream);
   --color-cream-2: var(--cream-2);
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
   --color-ink: var(--ink);
   --color-cream-ink: var(--cream-ink);
   --color-gold: var(--gold);
@@ -29,6 +50,7 @@
   --color-rose: var(--rose);
   --font-display: var(--font-display);
   --font-body: var(--font-body);
+  --radius-pill: 9999px;
 }
 
 body {
@@ -40,8 +62,93 @@ body {
 .font-display {
   font-family: var(--font-display), ui-serif, Georgia, serif;
 }
+/* Shared horizontal rhythm — hero nav, copy, and sections align on one left edge */
+.page-shell {
+  width: 100%;
+  max-width: 80rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+@media (min-width: 640px) {
+  .page-shell {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+@media (min-width: 1024px) {
+  .page-shell {
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
+  }
+}
 
-/* Scroll reveal: fade-in-blur (design-director effect #20) */
+
+.hero-shadow {
+  text-shadow:
+    0 2px 22px rgba(0, 0, 0, 0.8),
+    0 1px 4px rgba(0, 0, 0, 0.55);
+}
+
+/* Shape lock: interactive = pill */
+.pb-safe {
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));
+}
+
+.pt-safe {
+  padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+}
+
+
+.top-safe {
+  top: max(1rem, env(safe-area-inset-top, 0px));
+}
+.btn-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-pill);
+  background: var(--lacquer);
+  color: #fff;
+  font-weight: 500;
+  padding: 0.875rem 2rem;
+  box-shadow: 0 6px 0 0 var(--lacquer-deep);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-pill:hover {
+  transform: translateY(3px);
+  box-shadow: 0 3px 0 0 var(--lacquer-deep);
+}
+.btn-pill:active {
+  transform: translateY(6px);
+  box-shadow: none;
+}
+.btn-pill:disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.pill-shell {
+  border-radius: var(--radius-pill);
+  background: color-mix(in oklab, white 82%, var(--lacquer-soft));
+  border: 1px solid color-mix(in oklab, var(--lacquer) 10%, transparent);
+}
+
+.soft-shell {
+  border-radius: var(--radius-shell);
+  background: color-mix(in oklab, white 88%, var(--lacquer-soft));
+  border: 1px solid color-mix(in oklab, var(--lacquer) 10%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+@media (min-width: 640px) {
+  .soft-shell {
+    border-radius: 2.5rem;
+  }
+}
+
+/* Scroll reveal */
 .reveal {
   opacity: 0;
   filter: blur(8px);
@@ -54,19 +161,38 @@ body {
   transform: none;
 }
 
-/* Hero headline mask-rise (line-by-line) */
+/* Hero headline mask-rise */
 .hero-rise .line-inner {
   transform: translateY(115%);
   animation: heroRise 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 .hero-rise .overflow-hidden:nth-child(1) .line-inner { animation-delay: 0.1s; }
 .hero-rise .overflow-hidden:nth-child(2) .line-inner { animation-delay: 0.22s; }
-.hero-rise .overflow-hidden:nth-child(3) .line-inner { animation-delay: 0.34s; }
 @keyframes heroRise {
   to { transform: translateY(0); }
 }
 
-/* Gold line-draw underline (effect #09) */
+.link-underline {
+  position: relative;
+}
+.link-underline::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -0.15em;
+  height: 1px;
+  width: 100%;
+  transform: scaleX(0);
+  transform-origin: left;
+  background: var(--lacquer-bright);
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.link-underline:hover::after,
+.link-underline.is-visible::after {
+  transform: scaleX(1);
+}
+
+/* Legacy alias */
 .gold-underline {
   position: relative;
 }
@@ -79,7 +205,7 @@ body {
   width: 100%;
   transform: scaleX(0);
   transform-origin: left;
-  background: var(--gold);
+  background: var(--lacquer-bright);
   transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .gold-underline:hover::after,
@@ -97,5 +223,16 @@ body {
   .hero-rise .line-inner {
     transform: none;
     animation: none;
+  }
+  .pb-safe {
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));
+}
+
+.pt-safe {
+  padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+}
+
+.btn-pill {
+    transition: none;
   }
 }
