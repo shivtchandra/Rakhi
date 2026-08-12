@@ -167,8 +167,8 @@ export default function CreatePage() {
           <p className="text-[15px] text-ink/60 leading-relaxed">Share this link. It opens as a gift.</p>
           {!isFirebaseConfigured() && (
             <p className="text-xs text-ink/45 max-w-sm">
-              Saving on this computer for now (Firebase keys empty in .env.local). Links work while
-              this app is running; add Firebase for permanent cloud links.
+              Link includes your design (no cloud DB yet). Works across phones. Attached audio
+              files stay on this device — use Spotify for songs that travel.
             </p>
           )}
           <div className="flex items-center gap-3 pill-shell px-5 py-3 shadow-sm max-w-full">

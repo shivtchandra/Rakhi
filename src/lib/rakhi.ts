@@ -21,8 +21,21 @@ export type RakhiConfig = {
 
 const LOCAL_KEY = "rakhibox:local";
 const WRITE_TIMEOUT_MS = 8000;
+const EMBED_PREFIX = "v1_";
 
 type Stored = Omit<RakhiConfig, "createdAt">;
+
+/** Compact payload for URL-embedded links (no server DB required). */
+type EmbedPayload = {
+  s: RakhiStyle;
+  t: string;
+  b: string;
+  c: Charm;
+  n: string;
+  m: string;
+  sn?: string;
+  sp?: string;
+};
 
 function readLocal(): Record<string, Stored> {
   if (typeof window === "undefined") return {};
@@ -60,23 +73,80 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
   });
 }
 
-async function saveViaApi(payload: Stored): Promise<void> {
-  const res = await fetch("/api/rakhi", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...payload, createdAt: new Date().toISOString() }),
+function toBase64Url(json: string): string {
+  const bytes = new TextEncoder().encode(json);
+  let bin = "";
+  bytes.forEach((b) => {
+    bin += String.fromCharCode(b);
   });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Local API save failed (${res.status}): ${text}`);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function fromBase64Url(id: string): string {
+  const padded = id.replace(/-/g, "+").replace(/_/g, "/");
+  const pad = padded.length % 4 === 0 ? "" : "=".repeat(4 - (padded.length % 4));
+  const bin = atob(padded + pad);
+  const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
+export function encodeRakhiId(payload: Stored): string {
+  const embed: EmbedPayload = {
+    s: payload.style,
+    t: payload.threadColor,
+    b: payload.beadColor,
+    c: payload.charm,
+    n: payload.name,
+    m: payload.message,
+    ...(payload.songName ? { sn: payload.songName } : {}),
+    ...(payload.spotifyEmbedUrl ? { sp: payload.spotifyEmbedUrl } : {}),
+  };
+  return EMBED_PREFIX + toBase64Url(JSON.stringify(embed));
+}
+
+export function decodeRakhiId(id: string): Stored | null {
+  if (!id.startsWith(EMBED_PREFIX)) return null;
+  try {
+    const raw = JSON.parse(fromBase64Url(id.slice(EMBED_PREFIX.length))) as EmbedPayload;
+    if (!raw?.s || !raw?.m || !raw?.t || !raw?.b || !raw?.c) return null;
+    return {
+      id,
+      style: raw.s,
+      threadColor: raw.t,
+      beadColor: raw.b,
+      charm: raw.c,
+      name: raw.n ?? "",
+      message: raw.m,
+      ...(raw.sn ? { songName: raw.sn } : {}),
+      ...(raw.sp ? { spotifyEmbedUrl: raw.sp } : {}),
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function saveViaApi(payload: Stored): Promise<boolean> {
+  try {
+    const res = await fetch("/api/rakhi", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...payload, createdAt: new Date().toISOString() }),
+    });
+    return res.ok;
+  } catch {
+    return false;
   }
 }
 
 async function loadViaApi(id: string): Promise<Stored | null> {
-  const res = await fetch(`/api/rakhi/${id}`);
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`Local API read failed (${res.status})`);
-  return (await res.json()) as Stored;
+  try {
+    const res = await fetch(`/api/rakhi/${id}`);
+    if (res.status === 404) return null;
+    if (!res.ok) return null;
+    return (await res.json()) as Stored;
+  } catch {
+    return null;
+  }
 }
 
 export type CreateRakhiInput = Omit<RakhiConfig, "id" | "createdAt"> & {
@@ -84,29 +154,39 @@ export type CreateRakhiInput = Omit<RakhiConfig, "id" | "createdAt"> & {
 };
 
 export async function createRakhi(data: CreateRakhiInput): Promise<string> {
-  const id = nanoid(8);
   const { songDataUrl, ...rest } = data;
+
+  // Without Firebase, embed the config in the link id so it works on Vercel
+  // (server filesystem is read-only) and across devices with no database.
+  const useEmbed = !isFirebaseConfigured() || !db;
+  const id = useEmbed ? encodeRakhiId({ id: "pending", ...rest }) : nanoid(8);
+
   const payload: Stored = {
     id,
     ...rest,
     ...(songDataUrl && rest.songName ? { songName: rest.songName } : {}),
   };
 
-  if (songDataUrl && rest.songName) {
-    await saveSong(id, rest.songName, songDataUrl);
+  // Re-encode with final id for embed path (id already includes payload)
+  if (useEmbed) {
+    // id already encodes the config; keep song in IndexedDB under this id when present
+    if (songDataUrl && rest.songName) {
+      await saveSong(id, rest.songName, songDataUrl);
+    }
+    writeLocal(id, payload);
+    // Best-effort server cache (works on local next; no-op / fails quietly on Vercel)
+    void saveViaApi(payload);
+    return id;
   }
 
-  // No Firebase → persist on the Next server so links work across devices on this host.
-  if (!isFirebaseConfigured() || !db) {
-    await saveViaApi(payload);
-    writeLocal(id, payload);
-    return id;
+  if (songDataUrl && rest.songName) {
+    await saveSong(id, rest.songName, songDataUrl);
   }
 
   try {
     const { songName, ...firestoreFields } = payload;
     await withTimeout(
-      setDoc(doc(db, "rakhis", id), {
+      setDoc(doc(db!, "rakhis", id), {
         ...firestoreFields,
         ...(songName ? { songName } : {}),
         createdAt: serverTimestamp(),
@@ -117,14 +197,21 @@ export async function createRakhi(data: CreateRakhiInput): Promise<string> {
     writeLocal(id, payload);
     return id;
   } catch (err) {
-    console.warn("Firebase create failed, falling back to local API:", err);
-    await saveViaApi(payload);
-    writeLocal(id, payload);
-    return id;
+    console.warn("Firebase create failed, embedding in link:", err);
+    const embedId = encodeRakhiId(payload);
+    const embedded: Stored = { ...payload, id: embedId };
+    if (songDataUrl && rest.songName) {
+      await saveSong(embedId, rest.songName, songDataUrl);
+    }
+    writeLocal(embedId, embedded);
+    return embedId;
   }
 }
 
 export async function getRakhi(id: string): Promise<RakhiConfig | null> {
+  const embedded = decodeRakhiId(id);
+  if (embedded) return embedded;
+
   if (isFirebaseConfigured() && db) {
     try {
       const snap = await withTimeout(getDoc(doc(db, "rakhis", id)), WRITE_TIMEOUT_MS, "Firebase read");
@@ -136,12 +223,8 @@ export async function getRakhi(id: string): Promise<RakhiConfig | null> {
     }
   }
 
-  try {
-    const fromApi = await loadViaApi(id);
-    if (fromApi) return fromApi;
-  } catch (err) {
-    console.warn("Local API read failed:", err);
-  }
+  const fromApi = await loadViaApi(id);
+  if (fromApi) return fromApi;
 
   const local = readLocal()[id];
   return local ?? null;
