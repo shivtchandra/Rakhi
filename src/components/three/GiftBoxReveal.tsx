@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useRef, useState, useCallback } from "react";
+import { flushSync } from "react-dom";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { PerspectiveCamera } from "@react-three/drei";
 import gsap from "gsap";
@@ -144,33 +145,35 @@ function Scene({ rakhi, play, layout, onRevealed }: SceneProps) {
       },
     });
 
+    // 1. Box settles down slowly
     tl.to(box.position, {
       y: layout.boxDropY,
-      duration: 1.25,
+      duration: 1.7,
       ease: "power2.inOut",
     });
 
+    // 2. Lid opens after a short beat
     tl.to(lid.rotation, {
       x: -2.35,
-      duration: 1.65,
+      duration: 2.4,
       ease: "power2.inOut",
-    }, "-=0.25");
+    }, "+=0.2");
 
+    // 3. Rakhi rises smoothly once the lid is open
     tl.add(() => {
       rakhiGroup.visible = true;
-    }, "-=0.95");
-
+    });
     tl.to(rakhiGroup.position, {
       y: layout.riseY,
-      duration: 3.2,
+      duration: 4.2,
       ease: "power3.out",
-    }, "-=0.95");
+    }, "+=0.15");
 
     tl.to(
       target.current,
       {
         y: layout.riseY,
-        duration: 3.2,
+        duration: 4.2,
         ease: "power3.out",
       },
       "<"
@@ -182,13 +185,14 @@ function Scene({ rakhi, play, layout, onRevealed }: SceneProps) {
         x: layout.finalCam[0],
         y: layout.finalCam[1],
         z: layout.finalCam[2],
-        duration: 3.4,
+        duration: 4.4,
         ease: "power3.inOut",
       },
-      "<0.25"
+      "<0.2"
     );
 
-    tl.add(() => onRevealed(), "-=0.5");
+    // 4. Message types only after the rakhi has fully risen
+    tl.add(() => onRevealed(), "+=0.25");
 
     return () => {
       tl.kill();
@@ -250,6 +254,20 @@ function RevealCanvas({
   );
 }
 
+
+function spotifyAutoplaySrc(embedUrl: string): string {
+  try {
+    const u = new URL(embedUrl);
+    u.searchParams.set("autoplay", "1");
+    // Compact player; keep theme if present
+    if (!u.searchParams.has("theme")) u.searchParams.set("theme", "0");
+    return u.toString();
+  } catch {
+    const join = embedUrl.includes("?") ? "&" : "?";
+    return `${embedUrl}${join}autoplay=1`;
+  }
+}
+
 export default function GiftBoxReveal({ rakhi }: { rakhi: RakhiConfig }) {
   const isMobile = useIsMobile();
   const layout = isMobile ? MOBILE_LAYOUT : DESKTOP_LAYOUT;
@@ -259,7 +277,10 @@ export default function GiftBoxReveal({ rakhi }: { rakhi: RakhiConfig }) {
   const [songUrl, setSongUrl] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
   const [showSpotify, setShowSpotify] = useState(false);
+  const [typedMessage, setTypedMessage] = useState("");
+  const [typingDone, setTypingDone] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const spotifyRef = useRef<HTMLIFrameElement | null>(null);
   const hasSong = Boolean(rakhi.songName || rakhi.spotifyEmbedUrl);
 
   useEffect(() => {
@@ -275,10 +296,23 @@ export default function GiftBoxReveal({ rakhi }: { rakhi: RakhiConfig }) {
 
   const openGift = useCallback(() => {
     setPlay(true);
-    if (rakhi.spotifyEmbedUrl) {
-      setShowSpotify(true);
+
+    // Local attached audio — play inside the same user gesture
+    const audio = audioRef.current;
+    if (audio && songUrl) {
+      audio.currentTime = 0;
+      void audio.play().catch(() => {});
     }
-  }, [rakhi.spotifyEmbedUrl]);
+
+    // Spotify: set iframe src synchronously during the tap so browsers allow autoplay
+    if (rakhi.spotifyEmbedUrl) {
+      flushSync(() => setShowSpotify(true));
+      const frame = spotifyRef.current;
+      if (frame) {
+        frame.src = spotifyAutoplaySrc(rakhi.spotifyEmbedUrl);
+      }
+    }
+  }, [rakhi.spotifyEmbedUrl, songUrl]);
 
   // Robust play-on-open effect for asynchronously loaded songs
   useEffect(() => {
@@ -297,21 +331,53 @@ export default function GiftBoxReveal({ rakhi }: { rakhi: RakhiConfig }) {
     audio.muted = muted;
   }, [muted]);
 
+  useEffect(() => {
+    if (!revealed) {
+      setTypedMessage("");
+      setTypingDone(false);
+      return;
+    }
+    const full = rakhi.message;
+    if (prefersReducedMotion()) {
+      setTypedMessage(full);
+      setTypingDone(true);
+      return;
+    }
+    setTypedMessage("");
+    setTypingDone(false);
+    let i = 0;
+    const speed = Math.max(28, Math.min(55, 1400 / Math.max(full.length, 1)));
+    const id = window.setInterval(() => {
+      i += 1;
+      setTypedMessage(full.slice(0, i));
+      if (i >= full.length) {
+        window.clearInterval(id);
+        setTypingDone(true);
+      }
+    }, speed);
+    return () => window.clearInterval(id);
+  }, [revealed, rakhi.message]);
+
   return (
     <main className="relative w-full h-[100dvh] bg-plum overflow-hidden flex flex-col">
       {songUrl && <audio ref={audioRef} src={songUrl} loop preload="auto" />}
 
-      {/* Spotify Embed — pinned top-right on desktop, top on mobile */}
-      {showSpotify && rakhi.spotifyEmbedUrl && (
-        <div className="absolute top-safe right-4 left-4 sm:left-auto z-20 sm:w-[340px] pt-safe">
+      {/* Spotify — kept mounted (hidden) so Tap to open can set src in the same gesture */}
+      {rakhi.spotifyEmbedUrl && (
+        <div
+          className={`absolute top-safe right-4 left-4 sm:left-auto z-20 sm:w-[340px] pt-safe transition-opacity duration-500 ${
+            showSpotify ? "opacity-100" : "opacity-0 pointer-events-none"
+          }`}
+          aria-hidden={!showSpotify}
+        >
           <iframe
+            ref={spotifyRef}
             title="Spotify song"
-            src={`${rakhi.spotifyEmbedUrl}${rakhi.spotifyEmbedUrl.includes("?") ? "&" : "?"}autoplay=1`}
+            src="about:blank"
             width="100%"
-            height="80"
+            height="152"
             allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-            loading="lazy"
-            className="rounded-xl overflow-hidden shadow-2xl border border-cream-ink/10"
+            className="rounded-xl overflow-hidden shadow-2xl border border-cream-ink/10 bg-plum"
           />
         </div>
       )}
@@ -364,11 +430,19 @@ export default function GiftBoxReveal({ rakhi }: { rakhi: RakhiConfig }) {
                   : "opacity-0 translate-y-10 pointer-events-none"
               }`}
             >
-              <p className="text-cream-ink text-lg sm:text-2xl leading-relaxed drop-shadow font-display italic px-2">
-                &ldquo;{rakhi.message}&rdquo;
+              <p className="text-cream-ink text-lg sm:text-2xl leading-relaxed drop-shadow font-display italic px-2 min-h-[1.5em]">
+                &ldquo;{typedMessage}
+                {!typingDone && (
+                  <span className="inline-block w-[0.08em] h-[0.9em] ml-0.5 align-[-0.1em] bg-lacquer-bright animate-pulse" aria-hidden />
+                )}
+                &rdquo;
               </p>
 
-              <div className="flex flex-col sm:flex-row items-center gap-3 w-full justify-center">
+              <div
+                className={`flex flex-col sm:flex-row items-center gap-3 w-full justify-center transition-opacity duration-700 ${
+                  typingDone ? "opacity-100" : "opacity-0 pointer-events-none"
+                }`}
+              >
                 {songUrl && (
                   <button
                     type="button"

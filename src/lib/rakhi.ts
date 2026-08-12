@@ -2,6 +2,7 @@ import { doc, setDoc, getDoc, serverTimestamp, Timestamp } from "firebase/firest
 import { nanoid } from "nanoid";
 import { db, isFirebaseConfigured } from "./firebase";
 import { saveSong } from "./songStore";
+import { parseSpotifyLink } from "./spotify";
 import type { RakhiStyle, Charm } from "@/data/styles";
 
 export type RakhiConfig = {
@@ -21,12 +22,16 @@ export type RakhiConfig = {
 
 const LOCAL_KEY = "rakhibox:local";
 const WRITE_TIMEOUT_MS = 8000;
-const EMBED_PREFIX = "v1_";
+const EMBED_V1 = "v1_";
+const EMBED_V2 = "v2_";
+
+const STYLES_ORDER = ["traditional", "minimal", "cute", "premium", "festive"] as const;
+const CHARMS_ORDER = ["om", "heart", "initial", "gem"] as const;
 
 type Stored = Omit<RakhiConfig, "createdAt">;
 
-/** Compact payload for URL-embedded links (no server DB required). */
-type EmbedPayload = {
+/** Legacy v1 JSON blob (kept so old links still open). */
+type EmbedPayloadV1 = {
   s: RakhiStyle;
   t: string;
   b: string;
@@ -73,8 +78,8 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
   });
 }
 
-function toBase64Url(json: string): string {
-  const bytes = new TextEncoder().encode(json);
+function toBase64Url(raw: string): string {
+  const bytes = new TextEncoder().encode(raw);
   let bin = "";
   bytes.forEach((b) => {
     bin += String.fromCharCode(b);
@@ -90,27 +95,91 @@ function fromBase64Url(id: string): string {
   return new TextDecoder().decode(bytes);
 }
 
-export function encodeRakhiId(payload: Stored): string {
-  const embed: EmbedPayload = {
-    s: payload.style,
-    t: payload.threadColor,
-    b: payload.beadColor,
-    c: payload.charm,
-    n: payload.name,
-    m: payload.message,
-    ...(payload.songName ? { sn: payload.songName } : {}),
-    ...(payload.spotifyEmbedUrl ? { sp: payload.spotifyEmbedUrl } : {}),
-  };
-  return EMBED_PREFIX + toBase64Url(JSON.stringify(embed));
+function stripHash(hex: string): string {
+  return hex.replace(/^#/, "").toUpperCase();
 }
 
-export function decodeRakhiId(id: string): Stored | null {
-  if (!id.startsWith(EMBED_PREFIX)) return null;
+function withHash(hex: string): string {
+  return hex.startsWith("#") ? hex : `#${hex}`;
+}
+
+/** Compact Spotify: kind letter + 22-char id (e.g. t6Ma6CdqX6tW8Mj1whQdsZS). */
+function compactSpotify(embedOrLink: string): string | null {
+  const parsed = parseSpotifyLink(embedOrLink);
+  if (!parsed) return null;
+  return `${parsed.kind[0]}${parsed.id}`;
+}
+
+function expandSpotify(compact: string): string | null {
+  const kindMap: Record<string, string> = {
+    t: "track",
+    a: "album",
+    p: "playlist",
+    e: "episode",
+    s: "show",
+  };
+  const kind = kindMap[compact[0]];
+  const id = compact.slice(1);
+  if (!kind || !/^[a-zA-Z0-9]{22}$/.test(id)) return null;
+  return `https://open.spotify.com/embed/${kind}/${id}?utm_source=generator&theme=0`;
+}
+
+/**
+ * Compact v2: styleIdx␟thread␟bead␟charmIdx␟name␟message␟spotify␟songFlag
+ * Spotify is track-id only (not full embed URL) — that was most of the old length.
+ */
+export function encodeRakhiId(payload: Stored): string {
+  const sIdx = Math.max(0, STYLES_ORDER.indexOf(payload.style as (typeof STYLES_ORDER)[number]));
+  const cIdx = Math.max(0, CHARMS_ORDER.indexOf(payload.charm as (typeof CHARMS_ORDER)[number]));
+  const spotify = payload.spotifyEmbedUrl ? compactSpotify(payload.spotifyEmbedUrl) ?? "" : "";
+  const parts = [
+    String(sIdx),
+    stripHash(payload.threadColor),
+    stripHash(payload.beadColor),
+    String(cIdx),
+    payload.name || "",
+    payload.message,
+    spotify,
+    payload.songName ? "1" : "",
+  ];
+  while (parts.length > 6 && parts[parts.length - 1] === "") parts.pop();
+  return EMBED_V2 + toBase64Url(parts.join("\u001f"));
+}
+
+function decodeV2(body: string): Stored | null {
   try {
-    const raw = JSON.parse(fromBase64Url(id.slice(EMBED_PREFIX.length))) as EmbedPayload;
-    if (!raw?.s || !raw?.m || !raw?.t || !raw?.b || !raw?.c) return null;
+    const parts = fromBase64Url(body).split("\u001f");
+    if (parts.length < 6) return null;
+    const [sRaw, t, b, cRaw, n, m, sp = "", sn = ""] = parts;
+    const sIdx = Number(sRaw);
+    const cIdx = Number(cRaw);
+    if (!Number.isInteger(sIdx) || sIdx < 0 || sIdx >= STYLES_ORDER.length) return null;
+    if (!Number.isInteger(cIdx) || cIdx < 0 || cIdx >= CHARMS_ORDER.length) return null;
+    if (!t || !b || !m) return null;
+    const spotifyEmbedUrl = sp ? expandSpotify(sp) : null;
+    const id = EMBED_V2 + body;
     return {
       id,
+      style: STYLES_ORDER[sIdx],
+      threadColor: withHash(t),
+      beadColor: withHash(b),
+      charm: CHARMS_ORDER[cIdx],
+      name: n ?? "",
+      message: m,
+      ...(sn === "1" ? { songName: "song" } : {}),
+      ...(spotifyEmbedUrl ? { spotifyEmbedUrl } : {}),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function decodeV1(body: string): Stored | null {
+  try {
+    const raw = JSON.parse(fromBase64Url(body)) as EmbedPayloadV1;
+    if (!raw?.s || !raw?.m || !raw?.t || !raw?.b || !raw?.c) return null;
+    return {
+      id: EMBED_V1 + body,
       style: raw.s,
       threadColor: raw.t,
       beadColor: raw.b,
@@ -123,6 +192,12 @@ export function decodeRakhiId(id: string): Stored | null {
   } catch {
     return null;
   }
+}
+
+export function decodeRakhiId(id: string): Stored | null {
+  if (id.startsWith(EMBED_V2)) return decodeV2(id.slice(EMBED_V2.length));
+  if (id.startsWith(EMBED_V1)) return decodeV1(id.slice(EMBED_V1.length));
+  return null;
 }
 
 async function saveViaApi(payload: Stored): Promise<boolean> {
@@ -156,8 +231,6 @@ export type CreateRakhiInput = Omit<RakhiConfig, "id" | "createdAt"> & {
 export async function createRakhi(data: CreateRakhiInput): Promise<string> {
   const { songDataUrl, ...rest } = data;
 
-  // Without Firebase, embed the config in the link id so it works on Vercel
-  // (server filesystem is read-only) and across devices with no database.
   const useEmbed = !isFirebaseConfigured() || !db;
   const id = useEmbed ? encodeRakhiId({ id: "pending", ...rest }) : nanoid(8);
 
@@ -167,14 +240,11 @@ export async function createRakhi(data: CreateRakhiInput): Promise<string> {
     ...(songDataUrl && rest.songName ? { songName: rest.songName } : {}),
   };
 
-  // Re-encode with final id for embed path (id already includes payload)
   if (useEmbed) {
-    // id already encodes the config; keep song in IndexedDB under this id when present
     if (songDataUrl && rest.songName) {
       await saveSong(id, rest.songName, songDataUrl);
     }
     writeLocal(id, payload);
-    // Best-effort server cache (works on local next; no-op / fails quietly on Vercel)
     void saveViaApi(payload);
     return id;
   }
