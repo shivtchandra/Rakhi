@@ -55,11 +55,11 @@ export default function Home() {
           src="/hero-festival.png"
           alt=""
           aria-hidden
-          className="absolute inset-0 w-full h-full object-cover object-[56%_center] scale-110 origin-center brightness-90"
+          className="absolute inset-0 w-full h-full object-cover object-[38%_center] sm:object-[56%_center] scale-110 origin-center brightness-90"
         />
         {/* Soft left vignette only — smooth fade, no hard edge over the figures */}
         <div
-          className="absolute inset-0 pointer-events-none bg-[linear-gradient(90deg,rgba(18,16,20,0.82)_0%,rgba(18,16,20,0.45)_14%,rgba(18,16,20,0.08)_28%,transparent_36%)]"
+          className="absolute inset-0 pointer-events-none bg-[linear-gradient(90deg,rgba(18,16,20,0.92)_0%,rgba(18,16,20,0.72)_35%,rgba(18,16,20,0.15)_70%,transparent_90%)] sm:bg-[linear-gradient(90deg,rgba(18,16,20,0.82)_0%,rgba(18,16,20,0.45)_14%,rgba(18,16,20,0.08)_28%,transparent_36%)]"
           aria-hidden
         />
         <div
@@ -83,7 +83,7 @@ export default function Home() {
               <p className="text-[10px] sm:text-xs tracking-[0.24em] sm:tracking-[0.28em] uppercase text-lacquer-bright mb-4 sm:mb-5 -ml-[0.14em]">
                 Raksha Bandhan
               </p>
-              <div className="hero-rise font-display leading-[1.05] sm:leading-[1.1] text-[2.6rem] sm:text-6xl lg:text-7xl pb-1 w-full">
+              <div className="hero-rise font-display leading-[1.05] sm:leading-[1.1] text-[2.1rem] min-[380px]:text-[2.5rem] sm:text-6xl lg:text-7xl pb-1 w-full">
                 {["Not just a message.", "A moment."].map((l, i) => (
                   <div key={l} className="overflow-hidden">
                     <div className={`line-inner ${i === 1 ? "italic text-lacquer-bright" : ""}`}>
