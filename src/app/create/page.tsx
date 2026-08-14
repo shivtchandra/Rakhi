@@ -122,6 +122,7 @@ export default function CreatePage() {
   const [charm, setCharm] = useState<Charm>("om");
   const [name, setName] = useState("");
   const [message, setMessage] = useState("Happy Rakhi, bhai.");
+  const [upiId, setUpiId] = useState('');
   const [songName, setSongName] = useState<string | null>(null);
   const [songDataUrl, setSongDataUrl] = useState<string | null>(null);
   const [spotifyInput, setSpotifyInput] = useState("");
@@ -148,6 +149,7 @@ export default function CreatePage() {
         message,
         ...(songName && songDataUrl ? { songName, songDataUrl } : {}),
         ...(spotifyEmbedUrl ? { spotifyEmbedUrl } : {}),
+        ...(upiId ? { upiId } : {}),
       });
       setLink(`${window.location.origin}/r/${id}`);
     } catch (err) {
@@ -431,6 +433,22 @@ export default function CreatePage() {
                 {message.length} / 200
               </span>
             </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium tracking-[0.12em] uppercase text-ink/50">
+              Your UPI ID (optional)
+            </label>
+            <p className="text-xs text-ink/45 mt-0.5">
+              Add your UPI so your bhai can send shagun when they accept. E.g. <span className="font-mono">name@upi</span> or a phone number.
+            </p>
+            <input
+              type="text"
+              value={upiId}
+              onChange={(e) => setUpiId(e.target.value.trim())}
+              placeholder="name@upi or 9876543210"
+              className="block mt-2 w-full rounded-full border border-ink/15 px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-lacquer/30"
+            />
           </div>
 
           {error && <p className="text-sm text-lacquer">{error}</p>}

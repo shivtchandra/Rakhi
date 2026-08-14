@@ -4,6 +4,7 @@ import Link from "next/link";
 import RakhiSVG from "@/components/RakhiSVG";
 import Reveal from "@/components/Reveal";
 import { STYLES, type RakhiStyle } from "@/data/styles";
+import RunningCount from "@/components/RunningCount";
 
 const STEPS = [
   {
@@ -95,10 +96,11 @@ export default function Home() {
               <p className="mt-5 sm:mt-7 max-w-md text-cream-ink/80 leading-relaxed text-sm sm:text-base hidden sm:block">
                 Design a rakhi in 3D and send a gift-box link your sibling opens on their phone.
               </p>
-              <div className="mt-7 sm:mt-9">
+              <div className="mt-7 sm:mt-9 flex flex-col items-start gap-1">
                 <Link href="/create" className="btn-pill">
                   Design your rakhi
                 </Link>
+                <RunningCount />
               </div>
             </div>
           </div>
@@ -203,9 +205,12 @@ export default function Home() {
               A gift box floats in the dark. One tap, the lid lifts, the rakhi rises under a
               spotlight, and your message settles in.
             </p>
-            <Link href="/create" className="btn-pill mt-10">
-              Design your rakhi
-            </Link>
+            <div className="flex flex-col items-center gap-1">
+              <Link href="/create" className="btn-pill mt-10">
+                Design your rakhi
+              </Link>
+              <RunningCount />
+            </div>
           </Reveal>
         </div>
       </section>

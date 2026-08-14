@@ -17,6 +17,8 @@ export type RakhiConfig = {
   songName?: string;
   /** Spotify embed URL when a Spotify link was pasted. */
   spotifyEmbedUrl?: string;
+  /** Sender UPI ID or phone number for shagun. */
+  upiId?: string;
   createdAt?: Timestamp | string;
 };
 
@@ -141,6 +143,7 @@ export function encodeRakhiId(payload: Stored): string {
     payload.message,
     spotify,
     payload.songName ? "1" : "",
+    payload.upiId ?? "",
   ];
   while (parts.length > 6 && parts[parts.length - 1] === "") parts.pop();
   return EMBED_V2 + toBase64Url(parts.join("\u001f"));
@@ -150,7 +153,7 @@ function decodeV2(body: string): Stored | null {
   try {
     const parts = fromBase64Url(body).split("\u001f");
     if (parts.length < 6) return null;
-    const [sRaw, t, b, cRaw, n, m, sp = "", sn = ""] = parts;
+    const [sRaw, t, b, cRaw, n, m, sp = "", sn = "", upi = ""] = parts;
     const sIdx = Number(sRaw);
     const cIdx = Number(cRaw);
     if (!Number.isInteger(sIdx) || sIdx < 0 || sIdx >= STYLES_ORDER.length) return null;
@@ -168,6 +171,7 @@ function decodeV2(body: string): Stored | null {
       message: m,
       ...(sn === "1" ? { songName: "song" } : {}),
       ...(spotifyEmbedUrl ? { spotifyEmbedUrl } : {}),
+      ...(upi ? { upiId: upi } : {}),
     };
   } catch {
     return null;

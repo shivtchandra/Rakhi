@@ -1,6 +1,7 @@
 "use client";
 
 import { useId } from "react";
+import type { Ref } from "react";
 import type { RakhiStyle, Charm } from "@/data/styles";
 
 type Props = {
@@ -10,10 +11,11 @@ type Props = {
   charm: Charm;
   initial?: string;
   className?: string;
+  svgRef?: Ref<SVGSVGElement>;
 };
 
 /** Lighten (amt > 0) or darken (amt < 0) a hex color. */
-function shade(hex: string, amt: number) {
+export function shade(hex: string, amt: number) {
   const h = hex.replace("#", "");
   const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
   const n = parseInt(full, 16);
@@ -26,7 +28,34 @@ function shade(hex: string, amt: number) {
 
 const C = 120; // center
 
-function Charmed({ charm, uid, initial, style }: { charm: Charm; uid: string; initial?: string; style: RakhiStyle }) {
+/** Shared gradient defs the charm fill references (stone/silver/bronze). */
+export function charmFillDefs(uid: string, beadColor: string) {
+  return (
+    <>
+      <linearGradient id={`${uid}-silver`} x1="0" y1="0" x2="0.3" y2="1">
+        <stop offset="0%" stopColor="#F3F4F6" />
+        <stop offset="30%" stopColor="#D1D5DB" />
+        <stop offset="60%" stopColor="#9CA3AF" />
+        <stop offset="85%" stopColor="#E5E7EB" />
+        <stop offset="100%" stopColor="#9CA3AF" />
+      </linearGradient>
+      <linearGradient id={`${uid}-bronze`} x1="0" y1="0" x2="0.3" y2="1">
+        <stop offset="0%" stopColor="#FDBA74" />
+        <stop offset="30%" stopColor="#EA580C" />
+        <stop offset="60%" stopColor="#C2410C" />
+        <stop offset="85%" stopColor="#F97316" />
+        <stop offset="100%" stopColor="#9A3412" />
+      </linearGradient>
+      <radialGradient id={`${uid}-stone`} cx="34%" cy="28%">
+        <stop offset="0%" stopColor={shade(beadColor, 0.5)} />
+        <stop offset="60%" stopColor={beadColor} />
+        <stop offset="100%" stopColor={shade(beadColor, -0.3)} />
+      </radialGradient>
+    </>
+  );
+}
+
+export function Charmed({ charm, uid, initial, style }: { charm: Charm; uid: string; initial?: string; style: RakhiStyle }) {
   let fill = `url(#${uid}-stone)`;
   if (style === "silver") {
     fill = `url(#${uid}-silver)`;
@@ -72,7 +101,7 @@ function Charmed({ charm, uid, initial, style }: { charm: Charm; uid: string; in
   }
 }
 
-export default function RakhiSVG({ style, threadColor, beadColor, charm, initial, className }: Props) {
+export default function RakhiSVG({ style, threadColor, beadColor, charm, initial, className, svgRef }: Props) {
   const uid = useId().replace(/:/g, "");
 
   // Coordinates are rounded: raw Math.cos/sin output differs in the last
@@ -150,7 +179,7 @@ export default function RakhiSVG({ style, threadColor, beadColor, charm, initial
   };
 
   return (
-    <svg viewBox="0 0 240 240" className={className} role="img" aria-label="Rakhi">
+    <svg ref={svgRef} viewBox="0 0 240 240" className={className} role="img" aria-label="Rakhi">
       <defs>
         <linearGradient id={`${uid}-gold`} x1="0" y1="0" x2="0.3" y2="1">
           <stop offset="0%" stopColor="#F9EBB4" />
@@ -159,20 +188,7 @@ export default function RakhiSVG({ style, threadColor, beadColor, charm, initial
           <stop offset="85%" stopColor="#E5C97E" />
           <stop offset="100%" stopColor="#C79B3E" />
         </linearGradient>
-        <linearGradient id={`${uid}-silver`} x1="0" y1="0" x2="0.3" y2="1">
-          <stop offset="0%" stopColor="#F3F4F6" />
-          <stop offset="30%" stopColor="#D1D5DB" />
-          <stop offset="60%" stopColor="#9CA3AF" />
-          <stop offset="85%" stopColor="#E5E7EB" />
-          <stop offset="100%" stopColor="#9CA3AF" />
-        </linearGradient>
-        <linearGradient id={`${uid}-bronze`} x1="0" y1="0" x2="0.3" y2="1">
-          <stop offset="0%" stopColor="#FDBA74" />
-          <stop offset="30%" stopColor="#EA580C" />
-          <stop offset="60%" stopColor="#C2410C" />
-          <stop offset="85%" stopColor="#F97316" />
-          <stop offset="100%" stopColor="#9A3412" />
-        </linearGradient>
+        {charmFillDefs(uid, beadColor)}
         <radialGradient id={`${uid}-pearl`} cx="34%" cy="30%">
           <stop offset="0%" stopColor="#ffffff" />
           <stop offset="65%" stopColor="#F4EBDD" />
@@ -187,11 +203,6 @@ export default function RakhiSVG({ style, threadColor, beadColor, charm, initial
           <stop offset="0%" stopColor="#B45309" />
           <stop offset="70%" stopColor="#78350F" />
           <stop offset="100%" stopColor="#451A03" />
-        </radialGradient>
-        <radialGradient id={`${uid}-stone`} cx="34%" cy="28%">
-          <stop offset="0%" stopColor={shade(beadColor, 0.5)} />
-          <stop offset="60%" stopColor={beadColor} />
-          <stop offset="100%" stopColor={shade(beadColor, -0.3)} />
         </radialGradient>
         <radialGradient id={`${uid}-silk-green`} cx="34%" cy="28%">
           <stop offset="0%" stopColor="#83B552" />

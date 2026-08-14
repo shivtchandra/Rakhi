@@ -10,6 +10,7 @@ import Rakhi3D from "./Rakhi3D";
 import { SpotlightRig } from "./lights";
 import type { RakhiConfig } from "@/lib/rakhi";
 import { loadSong } from "@/lib/songStore";
+import WristPhotoStudio from "@/components/photo/WristPhotoStudio";
 
 type RevealLayout = {
   boxScale: number;
@@ -145,21 +146,18 @@ function Scene({ rakhi, play, layout, onRevealed }: SceneProps) {
       },
     });
 
-    // 1. Box settles down slowly
     tl.to(box.position, {
       y: layout.boxDropY,
       duration: 1.7,
       ease: "power2.inOut",
     });
 
-    // 2. Lid opens after a short beat
     tl.to(lid.rotation, {
       x: -2.35,
       duration: 2.4,
       ease: "power2.inOut",
     }, "+=0.2");
 
-    // 3. Rakhi rises smoothly once the lid is open
     tl.add(() => {
       rakhiGroup.visible = true;
     });
@@ -171,11 +169,7 @@ function Scene({ rakhi, play, layout, onRevealed }: SceneProps) {
 
     tl.to(
       target.current,
-      {
-        y: layout.riseY,
-        duration: 4.2,
-        ease: "power3.out",
-      },
+      { y: layout.riseY, duration: 4.2, ease: "power3.out" },
       "<"
     );
 
@@ -191,7 +185,6 @@ function Scene({ rakhi, play, layout, onRevealed }: SceneProps) {
       "<0.2"
     );
 
-    // 4. Message types only after the rakhi has fully risen
     tl.add(() => onRevealed(), "+=0.25");
 
     return () => {
@@ -254,12 +247,10 @@ function RevealCanvas({
   );
 }
 
-
 function spotifyAutoplaySrc(embedUrl: string): string {
   try {
     const u = new URL(embedUrl);
     u.searchParams.set("autoplay", "1");
-    // Compact player; keep theme if present
     if (!u.searchParams.has("theme")) u.searchParams.set("theme", "0");
     return u.toString();
   } catch {
@@ -268,12 +259,19 @@ function spotifyAutoplaySrc(embedUrl: string): string {
   }
 }
 
+function buildUpiLink(upiId: string): string {
+  const pa = encodeURIComponent(upiId.includes("@") ? upiId : `${upiId}@upi`);
+  return `upi://pay?pa=${pa}&tn=Shagun%20for%20Raksha%20Bandhan&cu=INR`;
+}
+
 export default function GiftBoxReveal({ rakhi }: { rakhi: RakhiConfig }) {
   const isMobile = useIsMobile();
   const layout = isMobile ? MOBILE_LAYOUT : DESKTOP_LAYOUT;
 
   const [play, setPlay] = useState(false);
   const [revealed, setRevealed] = useState(false);
+  const [accepted, setAccepted] = useState(false);
+  const [showPhotoStudio, setShowPhotoStudio] = useState(false);
   const [songUrl, setSongUrl] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
   const [showSpotify, setShowSpotify] = useState(false);
@@ -289,22 +287,18 @@ export default function GiftBoxReveal({ rakhi }: { rakhi: RakhiConfig }) {
     loadSong(rakhi.id).then((song) => {
       if (!cancelled && song?.dataUrl) setSongUrl(song.dataUrl);
     });
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [rakhi.id, rakhi.songName]);
 
   const openGift = useCallback(() => {
     setPlay(true);
 
-    // Local attached audio — play inside the same user gesture
     const audio = audioRef.current;
     if (audio && songUrl) {
       audio.currentTime = 0;
       void audio.play().catch(() => {});
     }
 
-    // Spotify: set iframe src synchronously during the tap so browsers allow autoplay
     if (rakhi.spotifyEmbedUrl) {
       flushSync(() => setShowSpotify(true));
       const frame = spotifyRef.current;
@@ -314,7 +308,6 @@ export default function GiftBoxReveal({ rakhi }: { rakhi: RakhiConfig }) {
     }
   }, [rakhi.spotifyEmbedUrl, songUrl]);
 
-  // Robust play-on-open effect for asynchronously loaded songs
   useEffect(() => {
     const audio = audioRef.current;
     if (play && audio && songUrl) {
@@ -362,7 +355,6 @@ export default function GiftBoxReveal({ rakhi }: { rakhi: RakhiConfig }) {
     <main className="relative w-full h-[100dvh] bg-plum overflow-hidden flex flex-col">
       {songUrl && <audio ref={audioRef} src={songUrl} loop preload="auto" />}
 
-      {/* Spotify — kept mounted (hidden) so Tap to open can set src in the same gesture */}
       {rakhi.spotifyEmbedUrl && (
         <div
           className={`absolute top-safe right-4 left-4 sm:left-auto z-20 sm:w-[340px] pt-safe transition-opacity duration-500 ${
@@ -382,7 +374,6 @@ export default function GiftBoxReveal({ rakhi }: { rakhi: RakhiConfig }) {
         </div>
       )}
 
-      {/* Full-screen 3D Canvas */}
       <div className="absolute inset-0 w-full h-full z-0">
         <RevealCanvas
           rakhi={rakhi}
@@ -392,12 +383,11 @@ export default function GiftBoxReveal({ rakhi }: { rakhi: RakhiConfig }) {
         />
       </div>
 
-      {/* HTML UI Overlay — pointer-events disabled on container, enabled on children */}
       <div className="relative z-10 w-full h-full flex flex-col pointer-events-none select-none">
 
-        {/* State 1: Before Opening */}
+        {/* Before opening */}
         {!play && (
-          <div className="flex-1 flex flex-col items-center justify-end px-5 pb-safe gap-4" style={{ paddingBottom: 'max(5rem, env(safe-area-inset-bottom, 1.25rem) + 4rem)' }}>
+          <div className="flex-1 flex flex-col items-center justify-end px-5 pb-safe gap-4" style={{ paddingBottom: "max(5rem, env(safe-area-inset-bottom, 1.25rem) + 4rem)" }}>
             <div className="flex flex-col items-center gap-1.5 pointer-events-auto text-center hero-shadow">
               <p className="text-cream-ink text-base sm:text-xl font-medium drop-shadow leading-snug">
                 {rakhi.name ? (
@@ -420,14 +410,12 @@ export default function GiftBoxReveal({ rakhi }: { rakhi: RakhiConfig }) {
           </div>
         )}
 
-        {/* State 2: After/During Opening */}
-        {play && (
-          <div className="flex-1 flex flex-col items-center justify-end px-5 gap-4" style={{ paddingBottom: 'max(4rem, env(safe-area-inset-bottom, 1.25rem) + 3rem)' }}>
+        {/* After opening — message + accept */}
+        {play && !accepted && (
+          <div className="flex-1 flex flex-col items-center justify-end px-5 gap-4" style={{ paddingBottom: "max(4rem, env(safe-area-inset-bottom, 1.25rem) + 3rem)" }}>
             <section
               className={`w-full max-w-sm flex flex-col items-center gap-4 text-center transition-all duration-700 ease-out pointer-events-auto ${
-                revealed
-                  ? "opacity-100 translate-y-0"
-                  : "opacity-0 translate-y-10 pointer-events-none"
+                revealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 pointer-events-none"
               }`}
             >
               <p className="text-cream-ink text-lg sm:text-2xl leading-relaxed drop-shadow font-display italic px-2 min-h-[1.5em]">
@@ -452,18 +440,71 @@ export default function GiftBoxReveal({ rakhi }: { rakhi: RakhiConfig }) {
                     {muted ? "🔈 Unmute song" : "🔇 Mute song"}
                   </button>
                 )}
-                <a
-                  href="/create"
+                <button
+                  type="button"
+                  onClick={() => setAccepted(true)}
                   className="btn-pill w-full sm:w-auto text-center transition active:scale-95 touch-manipulation"
                 >
-                  Design your rakhi
-                </a>
+                  Accept this Rakhi
+                </button>
               </div>
             </section>
           </div>
         )}
 
+        {/* Accepted */}
+        {accepted && (
+          <div className="flex-1 flex flex-col items-center justify-end px-5 gap-4" style={{ paddingBottom: "max(4rem, env(safe-area-inset-bottom, 1.25rem) + 3rem)" }}>
+            <section className="w-full max-w-sm flex flex-col items-center gap-4 text-center pointer-events-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
+              <p className="text-cream-ink text-xl sm:text-2xl font-display italic drop-shadow">
+                Rakhi accepted! 🎊
+              </p>
+              <div className="flex flex-col sm:flex-row items-center gap-3 w-full justify-center">
+                {songUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setMuted((m) => !m)}
+                    className="w-full sm:w-auto rounded-full border border-cream-ink/30 text-cream-ink/80 text-sm px-6 py-3 hover:bg-cream-ink/10 active:bg-cream-ink/20 transition touch-manipulation"
+                  >
+                    {muted ? "🔈 Unmute song" : "🔇 Mute song"}
+                  </button>
+                )}
+                {rakhi.upiId && (
+                  <a
+                    href={buildUpiLink(rakhi.upiId)}
+                    className="btn-pill w-full sm:w-auto text-center transition active:scale-95 touch-manipulation"
+                  >
+                    Send shagun 🎁
+                  </a>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowPhotoStudio(true)}
+                  className="w-full sm:w-auto rounded-full border border-cream-ink/30 text-cream-ink/80 text-sm px-6 py-3 hover:bg-cream-ink/10 active:bg-cream-ink/20 transition touch-manipulation"
+                >
+                  📸 Wear it for real
+                </button>
+                <a
+                  href="/create"
+                  className="w-full sm:w-auto rounded-full border border-cream-ink/30 text-cream-ink/80 text-sm px-6 py-3 hover:bg-cream-ink/10 active:bg-cream-ink/20 transition text-center touch-manipulation"
+                >
+                  Design your rakhi
+                </a>
+              </div>
+              {rakhi.upiId && (
+                <p className="text-cream-ink/40 text-xs">
+                  UPI: <span className="font-mono">{rakhi.upiId}</span>
+                </p>
+              )}
+            </section>
+          </div>
+        )}
+
       </div>
+
+      {showPhotoStudio && (
+        <WristPhotoStudio rakhi={rakhi} onClose={() => setShowPhotoStudio(false)} />
+      )}
     </main>
   );
 }
