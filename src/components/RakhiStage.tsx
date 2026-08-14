@@ -75,6 +75,24 @@ function CtrlButton({ label, icon, onClick }: { label: string; icon: string; onC
 export default function RakhiStage(props: Props) {
   const scene = useRef<RakhiSceneHandle>(null);
   const [ready, setReady] = useState(false);
+  const [capturing, setCapturing] = useState(false);
+
+  async function handleSnapshot() {
+    if (!scene.current || capturing) return;
+    setCapturing(true);
+    try {
+      const blob = await scene.current.snapshot();
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "rakhibox-3d-design.png";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+    } finally {
+      setCapturing(false);
+    }
+  }
 
   useEffect(() => setReady(true), []);
 
@@ -95,6 +113,13 @@ export default function RakhiStage(props: Props) {
         <CtrlButton label="Rotate" icon="⟳" onClick={() => scene.current?.toggleSpin()} />
         <CtrlButton label="Zoom" icon="⌕" onClick={() => scene.current?.zoomStep()} />
         <CtrlButton label="Reset" icon="⟲" onClick={() => scene.current?.reset()} />
+        {ready && (
+          <CtrlButton
+            label={capturing ? "Saving" : "Snapshot"}
+            icon="📷"
+            onClick={handleSnapshot}
+          />
+        )}
       </div>
 
       <div className="relative z-10 flex-1 min-h-[360px]">

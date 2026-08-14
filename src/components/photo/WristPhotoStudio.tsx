@@ -1,9 +1,13 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import RakhiSVG from "@/components/RakhiSVG";
-import { compositeToBlob, loadImageFromFile, svgToImage } from "@/lib/compositeImage";
+import type { RakhiSceneHandle } from "@/components/three/RakhiScene";
+import { blobToImage, compositeToBlob, loadImageFromFile, type LoadedImage } from "@/lib/compositeImage";
 import type { RakhiConfig } from "@/lib/rakhi";
+
+const RakhiScene = dynamic(() => import("@/components/three/RakhiScene"), { ssr: false });
 
 const MIN_SIZE_FRAC = 0.12;
 const MAX_SIZE_FRAC = 0.7;
@@ -22,9 +26,13 @@ export default function WristPhotoStudio({
   onClose: () => void;
 }) {
   const fileInput = useRef<HTMLInputElement>(null);
+  const cameraInput = useRef<HTMLInputElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
-  const stickerSvgRef = useRef<SVGSVGElement>(null);
+  const sceneApiRef = useRef<RakhiSceneHandle>(null);
+  const stickerImgRef = useRef<LoadedImage | null>(null);
 
+  const [capturing3D, setCapturing3D] = useState(true);
+  const [stickerPngUrl, setStickerPngUrl] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [aspect, setAspect] = useState(1);
@@ -42,7 +50,52 @@ export default function WristPhotoStudio({
   const canCopy = typeof window !== "undefined" && !!navigator.clipboard && typeof window.ClipboardItem !== "undefined";
   const canShare = typeof navigator !== "undefined" && !!navigator.share;
 
+  // Capture a real 3D render of the rakhi once, then use that PNG as the placeable sticker.
+  useEffect(() => {
+    let cancelled = false;
+    let tries = 0;
+    const tryCapture = () => {
+      if (cancelled) return;
+      tries += 1;
+      const api = sceneApiRef.current;
+      if (!api) {
+        if (tries < 120) setTimeout(tryCapture, 150);
+        else setCapturing3D(false);
+        return;
+      }
+      api.snapshot().then((blob) => {
+        if (cancelled) return;
+        if (blob) {
+          blobToImage(blob).then((loaded) => {
+            if (cancelled) {
+              loaded.revoke();
+              return;
+            }
+            stickerImgRef.current?.revoke();
+            stickerImgRef.current = loaded;
+            setStickerPngUrl(loaded.img.src);
+            setCapturing3D(false);
+          });
+          return;
+        }
+        if (tries < 120) {
+          setTimeout(tryCapture, 150);
+        } else {
+          setCapturing3D(false);
+        }
+      });
+    };
+    const id = setTimeout(tryCapture, 150);
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+      stickerImgRef.current?.revoke();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const pickPhoto = useCallback(() => fileInput.current?.click(), []);
+  const pickCamera = useCallback(() => cameraInput.current?.click(), []);
 
   const onFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -112,45 +165,18 @@ export default function WristPhotoStudio({
     }
   }, [cxFrac, cyFrac]);
 
-  const onHandlePointerDown = useCallback((e: React.PointerEvent) => {
-    e.stopPropagation();
-    e.currentTarget.setPointerCapture(e.pointerId);
-    const stage = stageRef.current;
-    if (!stage) return;
-    const rect = stage.getBoundingClientRect();
-    const centerX = rect.left + cxFrac * rect.width;
-    const centerY = rect.top + cyFrac * rect.height;
-    const startDist = Math.hypot(e.clientX - centerX, e.clientY - centerY) || 1;
-    const startSize = sizeFrac;
-
-    const onMove = (ev: PointerEvent) => {
-      const d = Math.hypot(ev.clientX - centerX, ev.clientY - centerY);
-      const next = Math.min(MAX_SIZE_FRAC, Math.max(MIN_SIZE_FRAC, startSize * (d / startDist)));
-      setSizeFrac(next);
-    };
-    const onUp = () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-    };
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-  }, [cxFrac, cyFrac, sizeFrac]);
 
   const buildComposite = useCallback(async () => {
-    if (!photoFile || !stickerSvgRef.current) throw new Error("Nothing to export yet");
-    const [photo, sticker] = await Promise.all([
-      loadImageFromFile(photoFile),
-      svgToImage(stickerSvgRef.current),
-    ]);
+    if (!photoFile || !stickerImgRef.current) throw new Error("Nothing to export yet");
+    const photo = await loadImageFromFile(photoFile);
     try {
       return await compositeToBlob({
         photoImg: photo.img,
-        stickerImg: sticker.img,
+        stickerImg: stickerImgRef.current.img,
         rect: { cxFrac, cyFrac, widthFrac: sizeFrac },
       });
     } finally {
       photo.revoke();
-      sticker.revoke();
     }
   }, [photoFile, cxFrac, cyFrac, sizeFrac]);
 
@@ -225,9 +251,18 @@ export default function WristPhotoStudio({
             <p className="text-cream-ink/70 text-sm leading-relaxed">
               Add a photo of your wrist, then place the charm on it.
             </p>
-            <button type="button" onClick={pickPhoto} className="btn-pill px-8 py-3.5">
-              Add a photo
-            </button>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <button type="button" onClick={pickCamera} className="btn-pill px-8 py-3.5">
+                Take a photo
+              </button>
+              <button
+                type="button"
+                onClick={pickPhoto}
+                className="rounded-full border border-cream-ink/30 text-cream-ink/80 text-sm px-8 py-3.5 hover:bg-cream-ink/10"
+              >
+                Choose from gallery
+              </button>
+            </div>
           </div>
         )}
 
@@ -255,20 +290,24 @@ export default function WristPhotoStudio({
                   transform: "translate(-50%, -50%)",
                 }}
               >
-                <RakhiSVG
-                  svgRef={stickerSvgRef}
-                  style={rakhi.style}
-                  threadColor={rakhi.threadColor}
-                  beadColor={rakhi.beadColor}
-                  charm={rakhi.charm}
-                  initial={rakhi.name}
-                  className="w-full h-full drop-shadow-[0_2px_5px_rgba(0,0,0,0.45)]"
-                />
-                <div
-                  onPointerDown={onHandlePointerDown}
-                  aria-label="Resize"
-                  className="absolute -right-1.5 -bottom-1.5 w-5 h-5 rounded-full bg-cream-ink border-2 border-lacquer touch-none cursor-nwse-resize"
-                />
+                {stickerPngUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={stickerPngUrl}
+                    alt="Your rakhi"
+                    draggable={false}
+                    className="w-full h-full object-contain drop-shadow-[0_2px_5px_rgba(0,0,0,0.45)]"
+                  />
+                ) : (
+                  <RakhiSVG
+                    style={rakhi.style}
+                    threadColor={rakhi.threadColor}
+                    beadColor={rakhi.beadColor}
+                    charm={rakhi.charm}
+                    initial={rakhi.name}
+                    className="w-full h-full drop-shadow-[0_2px_5px_rgba(0,0,0,0.45)] opacity-70"
+                  />
+                )}
               </div>
             </div>
 
@@ -332,6 +371,32 @@ export default function WristPhotoStudio({
         className="sr-only"
         onChange={onFileChange}
       />
+      <input
+        ref={cameraInput}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="sr-only"
+        onChange={onFileChange}
+      />
+
+      {/* Offscreen one-shot 3D capture — produces the real rakhi PNG used as the sticker above. */}
+      {capturing3D && (
+        <div
+          aria-hidden
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, pointerEvents: "none" }}
+        >
+          <RakhiScene
+            style={rakhi.style}
+            threadColor={rakhi.threadColor}
+            beadColor={rakhi.beadColor}
+            charm={rakhi.charm}
+            initial={rakhi.name}
+            apiRef={sceneApiRef}
+            still
+          />
+        </div>
+      )}
     </div>
   );
 }

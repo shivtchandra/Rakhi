@@ -21,6 +21,14 @@ export async function svgToImage(svg: SVGSVGElement): Promise<LoadedImage> {
   return { img, revoke: () => URL.revokeObjectURL(url) };
 }
 
+export async function blobToImage(blob: Blob): Promise<LoadedImage> {
+  const url = URL.createObjectURL(blob);
+  const img = new Image();
+  img.src = url;
+  await img.decode();
+  return { img, revoke: () => URL.revokeObjectURL(url) };
+}
+
 export type StickerRect = {
   /** Sticker center and size, in fractions (0-1) of the photo's width/height. */
   cxFrac: number;
