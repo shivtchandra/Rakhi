@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import RakhiSVG from "@/components/RakhiSVG";
 import type { RakhiSceneHandle } from "@/components/three/RakhiScene";
-import { blobToImage, compositeToBlob, loadImageFromFile, type LoadedImage } from "@/lib/compositeImage";
+import { blobToImage, compositeToBlob, loadPhotoOriented, type LoadedImage } from "@/lib/compositeImage";
 import type { RakhiConfig } from "@/lib/rakhi";
 
 const RakhiScene = dynamic(() => import("@/components/three/RakhiScene"), { ssr: false });
@@ -46,7 +46,8 @@ export default function WristPhotoStudio({
 
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const dragStart = useRef<{ x: number; y: number; cxFrac: number; cyFrac: number } | null>(null);
-  const pinchStart = useRef<{ dist: number; sizeFrac: number } | null>(null);
+  const pinchStart = useRef<{ dist: number; angle: number; sizeFrac: number; rotationDeg: number } | null>(null);
+  const rotateHandlePointerId = useRef<number | null>(null);
 
   const canCopy = typeof window !== "undefined" && !!navigator.clipboard && typeof window.ClipboardItem !== "undefined";
   const canShare = typeof navigator !== "undefined" && !!navigator.share;
@@ -130,10 +131,15 @@ export default function WristPhotoStudio({
       pinchStart.current = null;
     } else if (pointers.current.size === 2) {
       const pts = Array.from(pointers.current.values());
-      pinchStart.current = { dist: dist(pts[0], pts[1]), sizeFrac };
+      pinchStart.current = {
+        dist: dist(pts[0], pts[1]),
+        angle: Math.atan2(pts[1].y - pts[0].y, pts[1].x - pts[0].x) * (180 / Math.PI),
+        sizeFrac,
+        rotationDeg,
+      };
       dragStart.current = null;
     }
-  }, [cxFrac, cyFrac, sizeFrac]);
+  }, [cxFrac, cyFrac, sizeFrac, rotationDeg]);
 
   const onStickerPointerMove = useCallback((e: React.PointerEvent) => {
     if (!pointers.current.has(e.pointerId)) return;
@@ -144,9 +150,13 @@ export default function WristPhotoStudio({
 
     if (pointers.current.size === 2 && pinchStart.current) {
       const pts = Array.from(pointers.current.values());
-      const ratio = dist(pts[0], pts[1]) / pinchStart.current.dist;
+      const curDist = dist(pts[0], pts[1]);
+      const curAngle = Math.atan2(pts[1].y - pts[0].y, pts[1].x - pts[0].x) * (180 / Math.PI);
+      const ratio = curDist / pinchStart.current.dist;
       const next = Math.min(MAX_SIZE_FRAC, Math.max(MIN_SIZE_FRAC, pinchStart.current.sizeFrac * ratio));
       setSizeFrac(next);
+      const deltaAngle = (((curAngle - pinchStart.current.angle + 180) % 360) + 360) % 360 - 180;
+      setRotationDeg(pinchStart.current.rotationDeg + deltaAngle);
     } else if (pointers.current.size === 1 && dragStart.current) {
       const dx = (e.clientX - dragStart.current.x) / rect.width;
       const dy = (e.clientY - dragStart.current.y) / rect.height;
@@ -168,12 +178,36 @@ export default function WristPhotoStudio({
   }, [cxFrac, cyFrac]);
 
 
+  const onRotateHandlePointerDown = useCallback((e: React.PointerEvent) => {
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    rotateHandlePointerId.current = e.pointerId;
+  }, []);
+
+  const onRotateHandlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (rotateHandlePointerId.current !== e.pointerId) return;
+    e.stopPropagation();
+    const stage = stageRef.current;
+    if (!stage) return;
+    const rect = stage.getBoundingClientRect();
+    const centerX = rect.left + cxFrac * rect.width;
+    const centerY = rect.top + cyFrac * rect.height;
+    const angle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * (180 / Math.PI);
+    const next = (((angle + 90 + 180) % 360) + 360) % 360 - 180;
+    setRotationDeg(next);
+  }, [cxFrac, cyFrac]);
+
+  const onRotateHandlePointerUp = useCallback((e: React.PointerEvent) => {
+    e.stopPropagation();
+    if (rotateHandlePointerId.current === e.pointerId) rotateHandlePointerId.current = null;
+  }, []);
+
   const buildComposite = useCallback(async () => {
     if (!photoFile || !stickerImgRef.current) throw new Error("Nothing to export yet");
-    const photo = await loadImageFromFile(photoFile);
+    const photo = await loadPhotoOriented(photoFile);
     try {
       return await compositeToBlob({
-        photoImg: photo.img,
+        photo,
         stickerImg: stickerImgRef.current.img,
         rect: { cxFrac, cyFrac, widthFrac: sizeFrac, rotationDeg },
       });
@@ -275,11 +309,13 @@ export default function WristPhotoStudio({
           <div className="w-full max-w-sm flex flex-col items-center gap-4">
             <div
               ref={stageRef}
-              className="relative w-full rounded-2xl overflow-hidden select-none touch-none bg-black/20"
+              className="relative w-full select-none"
               style={{ aspectRatio: aspect }}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={photoUrl} alt="Your wrist" className="absolute inset-0 w-full h-full object-cover pointer-events-none" draggable={false} />
+              <div className="absolute inset-0 rounded-2xl overflow-hidden bg-black/20">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={photoUrl} alt="Your wrist" className="absolute inset-0 w-full h-full object-cover pointer-events-none" draggable={false} />
+              </div>
 
               <div
                 onPointerDown={onStickerPointerDown}
@@ -295,17 +331,16 @@ export default function WristPhotoStudio({
                   transform: "translate(-50%, -50%)",
                 }}
               >
-                {stickerPngUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={stickerPngUrl}
-                    alt="Your rakhi"
-                    draggable={false}
-                    className="w-full h-full object-contain drop-shadow-[0_2px_5px_rgba(0,0,0,0.45)]"
-                    style={{ transform: `rotate(${rotationDeg}deg)` }}
-                  />
-                ) : (
-                  <div className="w-full h-full" style={{ transform: `rotate(${rotationDeg}deg)` }}>
+                <div className="relative w-full h-full" style={{ transform: `rotate(${rotationDeg}deg)` }}>
+                  {stickerPngUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={stickerPngUrl}
+                      alt="Your rakhi"
+                      draggable={false}
+                      className="w-full h-full object-contain drop-shadow-[0_2px_5px_rgba(0,0,0,0.45)]"
+                    />
+                  ) : (
                     <RakhiSVG
                       style={rakhi.style}
                       threadColor={rakhi.threadColor}
@@ -314,8 +349,23 @@ export default function WristPhotoStudio({
                       initial={rakhi.name}
                       className="w-full h-full drop-shadow-[0_2px_5px_rgba(0,0,0,0.45)] opacity-70"
                     />
-                  </div>
-                )}
+                  )}
+
+                  <button
+                    type="button"
+                    onPointerDown={onRotateHandlePointerDown}
+                    onPointerMove={onRotateHandlePointerMove}
+                    onPointerUp={onRotateHandlePointerUp}
+                    onPointerCancel={onRotateHandlePointerUp}
+                    aria-label="Rotate"
+                    className="absolute left-1/2 -top-8 -translate-x-1/2 w-7 h-7 rounded-full bg-white/95 border border-lacquer/25 shadow flex items-center justify-center cursor-grab active:cursor-grabbing touch-none"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a1f2b" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="M21 12a9 9 0 1 1-3-6.7" />
+                      <path d="M21 3v6h-6" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
 
