@@ -42,6 +42,7 @@ export default function WristPhotoStudio({
   const [cxFrac, setCxFrac] = useState(0.5);
   const [cyFrac, setCyFrac] = useState(0.5);
   const [sizeFrac, setSizeFrac] = useState(DEFAULT_SIZE_FRAC);
+  const [rotationDeg, setRotationDeg] = useState(0);
 
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const dragStart = useRef<{ x: number; y: number; cxFrac: number; cyFrac: number } | null>(null);
@@ -115,6 +116,7 @@ export default function WristPhotoStudio({
       setCxFrac(0.5);
       setCyFrac(0.5);
       setSizeFrac(DEFAULT_SIZE_FRAC);
+      setRotationDeg(0);
     };
     probe.onerror = () => setError("Couldn't read that photo.");
     probe.src = url;
@@ -173,12 +175,12 @@ export default function WristPhotoStudio({
       return await compositeToBlob({
         photoImg: photo.img,
         stickerImg: stickerImgRef.current.img,
-        rect: { cxFrac, cyFrac, widthFrac: sizeFrac },
+        rect: { cxFrac, cyFrac, widthFrac: sizeFrac, rotationDeg },
       });
     } finally {
       photo.revoke();
     }
-  }, [photoFile, cxFrac, cyFrac, sizeFrac]);
+  }, [photoFile, cxFrac, cyFrac, sizeFrac, rotationDeg]);
 
   const handleDownload = useCallback(async () => {
     setError(null);
@@ -239,9 +241,12 @@ export default function WristPhotoStudio({
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="text-cream-ink/70 hover:text-cream-ink text-2xl leading-none px-2"
+          className="flex items-center gap-2 rounded-full bg-white/15 hover:bg-white/25 transition-colors px-4 py-2 text-cream-ink text-sm font-medium"
         >
-          ×
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden>
+            <path d="M18 6 6 18M6 6l12 12" />
+          </svg>
+          Back
         </button>
       </div>
 
@@ -297,16 +302,19 @@ export default function WristPhotoStudio({
                     alt="Your rakhi"
                     draggable={false}
                     className="w-full h-full object-contain drop-shadow-[0_2px_5px_rgba(0,0,0,0.45)]"
+                    style={{ transform: `rotate(${rotationDeg}deg)` }}
                   />
                 ) : (
-                  <RakhiSVG
-                    style={rakhi.style}
-                    threadColor={rakhi.threadColor}
-                    beadColor={rakhi.beadColor}
-                    charm={rakhi.charm}
-                    initial={rakhi.name}
-                    className="w-full h-full drop-shadow-[0_2px_5px_rgba(0,0,0,0.45)] opacity-70"
-                  />
+                  <div className="w-full h-full" style={{ transform: `rotate(${rotationDeg}deg)` }}>
+                    <RakhiSVG
+                      style={rakhi.style}
+                      threadColor={rakhi.threadColor}
+                      beadColor={rakhi.beadColor}
+                      charm={rakhi.charm}
+                      initial={rakhi.name}
+                      className="w-full h-full drop-shadow-[0_2px_5px_rgba(0,0,0,0.45)] opacity-70"
+                    />
+                  </div>
                 )}
               </div>
             </div>
@@ -322,6 +330,28 @@ export default function WristPhotoStudio({
                 onChange={(e) => setSizeFrac(Number(e.target.value))}
                 className="flex-1"
               />
+            </label>
+
+            <label className="w-full flex items-center gap-3 text-cream-ink/60 text-xs">
+              Rotate
+              <input
+                type="range"
+                min={-180}
+                max={180}
+                step={1}
+                value={rotationDeg}
+                onChange={(e) => setRotationDeg(Number(e.target.value))}
+                className="flex-1"
+              />
+              {rotationDeg !== 0 && (
+                <button
+                  type="button"
+                  onClick={() => setRotationDeg(0)}
+                  className="text-cream-ink/50 underline underline-offset-2 shrink-0"
+                >
+                  Reset
+                </button>
+              )}
             </label>
 
             {error && <p className="text-sm text-lacquer-bright text-center">{error}</p>}

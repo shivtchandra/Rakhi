@@ -27,8 +27,8 @@ const TRUST: { icon: IconName; title: string; sub: string }[] = [
 
 function TrustIcon({ name }: { name: IconName }) {
   const common = {
-    width: 16,
-    height: 16,
+    width: 20,
+    height: 20,
     viewBox: "0 0 24 24",
     fill: "none",
     stroke: "currentColor",
@@ -110,7 +110,6 @@ export default function RakhiStage(props: Props) {
       </div>
 
       <div className="absolute z-20 left-5 top-1/2 -translate-y-1/2 flex flex-col gap-2">
-        <CtrlButton label="Rotate" icon="⟳" onClick={() => scene.current?.toggleSpin()} />
         <CtrlButton label="Zoom" icon="⌕" onClick={() => scene.current?.zoomStep()} />
         <CtrlButton label="Reset" icon="⟲" onClick={() => scene.current?.reset()} />
         {ready && (
@@ -143,15 +142,15 @@ export default function RakhiStage(props: Props) {
         </span>
       </div>
 
-      <div className="relative z-10 grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white/80 backdrop-blur px-5 py-4 border-t border-lacquer/10">
+      <div className="relative z-10 grid grid-cols-2 sm:grid-cols-4 gap-4 bg-white/90 backdrop-blur px-6 py-5 border-t border-lacquer/15">
         {TRUST.map((t) => (
-          <div key={t.title} className="flex items-start gap-2 text-lacquer">
+          <div key={t.title} className="flex items-start gap-3 text-lacquer">
             <span className="mt-0.5">
               <TrustIcon name={t.icon} />
             </span>
             <div className="leading-tight">
-              <div className="text-[11px] font-semibold text-ink">{t.title}</div>
-              <div className="text-[10px] text-ink/55">{t.sub}</div>
+              <div className="text-[13px] font-semibold text-ink">{t.title}</div>
+              <div className="text-[11px] text-ink/60">{t.sub}</div>
             </div>
           </div>
         ))}

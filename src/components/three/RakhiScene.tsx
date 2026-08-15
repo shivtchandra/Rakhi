@@ -10,7 +10,6 @@ import { WarmLights } from "./lights";
 import type { RakhiStyle, Charm } from "@/data/styles";
 
 export type RakhiSceneHandle = {
-  toggleSpin: () => void;
   zoomStep: () => void;
   reset: () => void;
   snapshot: () => Promise<Blob | null>;
@@ -41,10 +40,6 @@ export default function RakhiScene({ apiRef, still, ...props }: Props) {
   const canvasElRef = useRef<HTMLCanvasElement | null>(null);
 
   useImperativeHandle(apiRef, () => ({
-    toggleSpin() {
-      const c = controls.current;
-      if (c) c.autoRotate = !c.autoRotate;
-    },
     zoomStep() {
       const c = controls.current;
       if (!c) return;

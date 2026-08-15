@@ -34,6 +34,8 @@ export type StickerRect = {
   cxFrac: number;
   cyFrac: number;
   widthFrac: number;
+  /** Rotation in degrees, applied around the sticker's own center. */
+  rotationDeg?: number;
 };
 
 export async function compositeToBlob({
@@ -63,9 +65,14 @@ export async function compositeToBlob({
 
   const stickerW = rect.widthFrac * canvasW;
   const stickerH = stickerW * (stickerImg.naturalHeight / stickerImg.naturalWidth);
-  const stickerX = rect.cxFrac * canvasW - stickerW / 2;
-  const stickerY = rect.cyFrac * canvasH - stickerH / 2;
-  ctx.drawImage(stickerImg, stickerX, stickerY, stickerW, stickerH);
+  const stickerCx = rect.cxFrac * canvasW;
+  const stickerCy = rect.cyFrac * canvasH;
+
+  ctx.save();
+  ctx.translate(stickerCx, stickerCy);
+  if (rect.rotationDeg) ctx.rotate((rect.rotationDeg * Math.PI) / 180);
+  ctx.drawImage(stickerImg, -stickerW / 2, -stickerH / 2, stickerW, stickerH);
+  ctx.restore();
 
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {

@@ -260,7 +260,15 @@ function spotifyAutoplaySrc(embedUrl: string): string {
 }
 
 function buildUpiLink(upiId: string): string {
-  const pa = encodeURIComponent(upiId.includes("@") ? upiId : `${upiId}@upi`);
+  let vpa = upiId;
+  if (!upiId.includes("@")) {
+    // Bare mobile number: NPCI's "UPI Number" format needs the country code,
+    // e.g. 9959041832 -> 919959041832@upi. A 10-digit number alone won't resolve.
+    const digits = upiId.replace(/\D/g, "");
+    const withCountryCode = digits.length === 10 ? `91${digits}` : digits;
+    vpa = `${withCountryCode}@upi`;
+  }
+  const pa = encodeURIComponent(vpa);
   return `upi://pay?pa=${pa}&tn=Shagun%20for%20Raksha%20Bandhan&cu=INR`;
 }
 
@@ -435,16 +443,30 @@ export default function GiftBoxReveal({ rakhi }: { rakhi: RakhiConfig }) {
                   <button
                     type="button"
                     onClick={() => setMuted((m) => !m)}
-                    className="w-full sm:w-auto rounded-full border border-cream-ink/30 text-cream-ink/80 text-sm px-6 py-3 hover:bg-cream-ink/10 active:bg-cream-ink/20 transition touch-manipulation"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full border border-cream-ink/25 text-cream-ink/70 text-sm px-5 py-3 min-h-[48px] hover:bg-cream-ink/10 active:bg-cream-ink/20 transition touch-manipulation"
                   >
-                    {muted ? "🔈 Unmute song" : "🔇 Mute song"}
+                    {muted ? (
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                        <line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
+                      </svg>
+                    ) : (
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                      </svg>
+                    )}
+                    {muted ? "Unmute" : "Mute"}
                   </button>
                 )}
                 <button
                   type="button"
                   onClick={() => setAccepted(true)}
-                  className="btn-pill w-full sm:w-auto text-center transition active:scale-95 touch-manipulation"
+                  className="btn-pill w-full sm:w-auto inline-flex items-center justify-center gap-2 text-center transition active:scale-95 touch-manipulation min-h-[48px]"
                 >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
                   Accept this Rakhi
                 </button>
               </div>
@@ -455,44 +477,65 @@ export default function GiftBoxReveal({ rakhi }: { rakhi: RakhiConfig }) {
         {/* Accepted */}
         {accepted && (
           <div className="flex-1 flex flex-col items-center justify-end px-5 gap-4" style={{ paddingBottom: "max(4rem, env(safe-area-inset-bottom, 1.25rem) + 3rem)" }}>
-            <section className="w-full max-w-sm flex flex-col items-center gap-4 text-center pointer-events-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <section className="w-full max-w-xs flex flex-col items-center gap-5 text-center pointer-events-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
               <p className="text-cream-ink text-xl sm:text-2xl font-display italic drop-shadow">
-                Rakhi accepted! 🎊
+                Rakhi accepted!
               </p>
-              <div className="flex flex-col sm:flex-row items-center gap-3 w-full justify-center">
-                {songUrl && (
-                  <button
-                    type="button"
-                    onClick={() => setMuted((m) => !m)}
-                    className="w-full sm:w-auto rounded-full border border-cream-ink/30 text-cream-ink/80 text-sm px-6 py-3 hover:bg-cream-ink/10 active:bg-cream-ink/20 transition touch-manipulation"
-                  >
-                    {muted ? "🔈 Unmute song" : "🔇 Mute song"}
-                  </button>
-                )}
+              <div className="flex flex-col items-stretch gap-2.5 w-full">
                 {rakhi.upiId && (
                   <a
                     href={buildUpiLink(rakhi.upiId)}
-                    className="btn-pill w-full sm:w-auto text-center transition active:scale-95 touch-manipulation"
+                    className="btn-pill inline-flex items-center justify-center gap-2.5 text-center transition active:scale-95 touch-manipulation min-h-[52px] text-sm font-semibold"
                   >
-                    Send shagun 🎁
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                    </svg>
+                    Send shagun
                   </a>
                 )}
                 <button
                   type="button"
                   onClick={() => setShowPhotoStudio(true)}
-                  className="w-full sm:w-auto rounded-full border border-cream-ink/30 text-cream-ink/80 text-sm px-6 py-3 hover:bg-cream-ink/10 active:bg-cream-ink/20 transition touch-manipulation"
+                  className="inline-flex items-center justify-center gap-2.5 rounded-full bg-cream-ink/12 border border-cream-ink/20 text-cream-ink text-sm font-medium px-5 min-h-[52px] hover:bg-cream-ink/18 active:bg-cream-ink/25 transition touch-manipulation"
                 >
-                  📸 Wear it for real
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                    <circle cx="12" cy="13" r="4"/>
+                  </svg>
+                  Wear it for real
                 </button>
+                {songUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setMuted((m) => !m)}
+                    className="inline-flex items-center justify-center gap-2.5 rounded-full border border-cream-ink/20 text-cream-ink/60 text-sm px-5 min-h-[48px] hover:bg-cream-ink/10 active:bg-cream-ink/18 transition touch-manipulation"
+                  >
+                    {muted ? (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                        <line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
+                      </svg>
+                    ) : (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                      </svg>
+                    )}
+                    {muted ? "Unmute song" : "Mute song"}
+                  </button>
+                )}
                 <a
                   href="/create"
-                  className="w-full sm:w-auto rounded-full border border-cream-ink/30 text-cream-ink/80 text-sm px-6 py-3 hover:bg-cream-ink/10 active:bg-cream-ink/20 transition text-center touch-manipulation"
+                  className="inline-flex items-center justify-center gap-2.5 rounded-full border border-cream-ink/15 text-cream-ink/50 text-sm px-5 min-h-[48px] hover:bg-cream-ink/8 active:bg-cream-ink/15 transition text-center touch-manipulation"
                 >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                  </svg>
                   Design your rakhi
                 </a>
               </div>
               {rakhi.upiId && (
-                <p className="text-cream-ink/40 text-xs">
+                <p className="text-cream-ink/35 text-xs">
                   UPI: <span className="font-mono">{rakhi.upiId}</span>
                 </p>
               )}
