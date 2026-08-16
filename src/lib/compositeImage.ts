@@ -93,8 +93,12 @@ export async function compositeToBlob({
 
   ctx.drawImage(photo.draw, 0, 0, canvasW, canvasH);
 
-  const stickerW = rect.widthFrac * canvasW;
-  const stickerH = stickerW * (stickerImg.naturalHeight / stickerImg.naturalWidth);
+  // Sticker is placed like CSS object-fit: contain inside a square box of this side length,
+  // matching the square preview box — the sticker PNG isn't guaranteed to be square itself.
+  const boxSide = rect.widthFrac * canvasW;
+  const stickerAspect = stickerImg.naturalWidth / stickerImg.naturalHeight;
+  const stickerW = stickerAspect >= 1 ? boxSide : boxSide * stickerAspect;
+  const stickerH = stickerAspect >= 1 ? boxSide / stickerAspect : boxSide;
   const stickerCx = rect.cxFrac * canvasW;
   const stickerCy = rect.cyFrac * canvasH;
 
