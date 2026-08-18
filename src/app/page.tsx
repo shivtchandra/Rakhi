@@ -5,6 +5,7 @@ import RakhiSVG from "@/components/RakhiSVG";
 import Reveal from "@/components/Reveal";
 import { STYLES, type RakhiStyle } from "@/data/styles";
 import RunningCount from "@/components/RunningCount";
+import ShareSiteButton from "@/components/ShareSiteButton";
 
 const STEPS = [
   {
@@ -97,11 +98,12 @@ export default function Home() {
                 Design a 3D rakhi online and send it as a digital gift-box link — no shipping, no
                 waiting, arrives instantly for siblings anywhere in India or abroad.
               </p>
-              <div className="mt-7 sm:mt-9 flex flex-col items-start gap-1">
+              <div className="mt-7 sm:mt-9 flex flex-col items-start gap-2">
                 <Link href="/create" className="btn-pill">
                   Design your rakhi
                 </Link>
                 <RunningCount />
+                <ShareSiteButton className="text-cream-ink/60 hover:text-cream-ink mt-1" />
               </div>
             </div>
           </div>
@@ -206,11 +208,12 @@ export default function Home() {
               A gift box floats in the dark. One tap, the lid lifts, the rakhi rises under a
               spotlight, and your message settles in.
             </p>
-            <div className="flex flex-col items-center gap-1">
+            <div className="flex flex-col items-center gap-2">
               <Link href="/create" className="btn-pill mt-10">
                 Design your rakhi
               </Link>
               <RunningCount />
+              <ShareSiteButton className="text-cream-ink/60 hover:text-cream-ink" />
             </div>
           </Reveal>
         </div>

@@ -192,6 +192,17 @@ export default function CreatePage() {
             >
               Share on WhatsApp
             </a>
+            {typeof navigator !== "undefined" && !!navigator.share && (
+              <button
+                type="button"
+                onClick={() =>
+                  navigator.share({ title: "I made you a rakhi", text: "Open it on your phone", url: link }).catch(() => {})
+                }
+                className="rounded-full border border-lacquer/30 text-lacquer px-6 py-2.5 text-sm font-medium hover:bg-lacquer-soft"
+              >
+                More share options
+              </button>
+            )}
             <a
               href={link}
               className="rounded-full border border-lacquer/30 text-lacquer px-6 py-2.5 text-sm font-medium hover:bg-lacquer-soft"
