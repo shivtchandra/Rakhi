@@ -19,10 +19,43 @@ export const viewport = {
   viewportFit: "cover",
 };
 
+const SITE_URL = "https://www.makeyourrakhi.in";
+const SITE_NAME = "RakhiBox";
+const SITE_TITLE = "RakhiBox - Not just a message. A moment.";
+const SITE_DESCRIPTION =
+  "Design a kundan rakhi in 3D and send a cinematic gift-box experience your sibling opens on their phone.";
+
 export const metadata: Metadata = {
-  title: "RakhiBox - Not just a message. A moment.",
-  description:
-    "Design a kundan rakhi in 3D and send a cinematic gift-box experience your sibling opens on their phone.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE_TITLE,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    url: "/",
+    siteName: SITE_NAME,
+    type: "website",
+    locale: "en_IN",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+  },
+};
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: SITE_NAME,
+  url: SITE_URL,
+  description: SITE_DESCRIPTION,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -32,6 +65,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${fraunces.variable} ${jakarta.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
         {children}
         <Analytics />
       </body>
