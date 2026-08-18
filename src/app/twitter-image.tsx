@@ -1,1 +1,5 @@
-export { default, alt, size, contentType, runtime } from "./opengraph-image";
+export { default } from "./opengraph-image";
+
+export const alt = "RakhiBox — design a 3D rakhi and send a gift-box moment";
+export const size = { width: 1200, height: 630 };
+export const contentType = "image/png";
