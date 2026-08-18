@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "Make Your Rakhi — design a 3D rakhi and send a gift-box moment";
+export const alt = "Make Your Rakhi — design a 3D rakhi and send it online, no shipping, instant delivery";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -90,7 +90,7 @@ export default async function Image() {
             maxWidth: 820,
           }}
         >
-          Design your own 3D rakhi and send a gift-box moment
+          Design a 3D rakhi and send it online — no shipping, instant delivery
         </div>
       </div>
     ),

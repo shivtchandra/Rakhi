@@ -15,7 +15,7 @@ const STEPS = [
   {
     n: "02",
     title: "Send",
-    body: "Add a message and generate one private link. Share it on WhatsApp in seconds.",
+    body: "Add a message and generate one private link. Share it on WhatsApp in seconds — no shipping, works for siblings abroad too.",
   },
   {
     n: "03",
@@ -84,7 +84,7 @@ export default function Home() {
               <p className="text-[10px] sm:text-xs tracking-[0.24em] sm:tracking-[0.28em] uppercase text-lacquer-bright mb-4 sm:mb-5 -ml-[0.14em]">
                 Raksha Bandhan
               </p>
-              <div className="hero-rise font-display leading-[1.05] sm:leading-[1.1] text-[2.1rem] min-[380px]:text-[2.5rem] sm:text-6xl lg:text-7xl pb-1 w-full">
+              <h1 className="hero-rise font-display leading-[1.05] sm:leading-[1.1] text-[2.1rem] min-[380px]:text-[2.5rem] sm:text-6xl lg:text-7xl pb-1 w-full">
                 {["Not just a message.", "A moment."].map((l, i) => (
                   <div key={l} className="overflow-hidden">
                     <div className={`line-inner ${i === 1 ? "italic text-lacquer-bright" : ""}`}>
@@ -92,9 +92,10 @@ export default function Home() {
                     </div>
                   </div>
                 ))}
-              </div>
+              </h1>
               <p className="mt-5 sm:mt-7 max-w-md text-cream-ink/80 leading-relaxed text-sm sm:text-base hidden sm:block">
-                Design a rakhi in 3D and send a gift-box link your sibling opens on their phone.
+                Design a 3D rakhi online and send it as a digital gift-box link — no shipping, no
+                waiting, arrives instantly for siblings anywhere in India or abroad.
               </p>
               <div className="mt-7 sm:mt-9 flex flex-col items-start gap-1">
                 <Link href="/create" className="btn-pill">
