@@ -21,9 +21,9 @@ export const viewport = {
 
 const SITE_URL = "https://www.makeyourrakhi.in";
 const SITE_NAME = "Make Your Rakhi";
-const SITE_TITLE = "Make Your Rakhi — Design a 3D Rakhi & Send It Online Instantly";
+const SITE_TITLE = "Rakhi Online for Raksha Bandhan 2026 — Design & Send a 3D Rakhi Instantly | Make Your Rakhi";
 const SITE_DESCRIPTION =
-  "Design a personalised 3D rakhi and send it as a digital gift-box link for Raksha Bandhan — no shipping, no waiting, perfect for siblings abroad or anywhere in India.";
+  "Send rakhi online in minutes — design a personalised 3D rakhi and share it as an instant gift-box link for Raksha Bandhan 2026. No shipping, no waiting, works for siblings anywhere in India or abroad.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

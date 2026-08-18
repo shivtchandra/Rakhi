@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Design Your Rakhi Online — 3D Rakhi Maker",
+  title: "Rakhi Online — Design Your Own 3D Rakhi for Raksha Bandhan 2026",
   description:
-    "Pick a style, thread colour, stones and charm, then send your 3D rakhi as an instant digital gift-box link — no shipping needed, works for siblings abroad too.",
+    "Send rakhi online in minutes. Pick a style, thread colour, stones and charm, then share your 3D rakhi as an instant gift-box link — no shipping needed, works for siblings abroad too.",
   alternates: {
     canonical: "/create",
   },
   openGraph: {
-    title: "Design Your Rakhi Online — 3D Rakhi Maker | Make Your Rakhi",
+    title: "Rakhi Online — Design Your Own 3D Rakhi | Make Your Rakhi",
     description:
-      "Pick a style, thread colour, stones and charm, then send your 3D rakhi as an instant digital gift-box link.",
+      "Send rakhi online in minutes — design your 3D rakhi and share it as an instant gift-box link.",
     url: "/create",
   },
 };
