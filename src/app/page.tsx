@@ -56,11 +56,11 @@ export default function Home() {
           src="/hero-festival.png"
           alt=""
           aria-hidden
-          className="absolute inset-0 w-full h-full object-cover object-[38%_center] sm:object-[56%_center] scale-110 origin-center brightness-90"
+          className="absolute inset-0 w-full h-full object-cover object-[60%_center] sm:object-[56%_center] scale-110 origin-center brightness-100 sm:brightness-90"
         />
         {/* Soft left vignette only — smooth fade, no hard edge over the figures */}
         <div
-          className="absolute inset-0 pointer-events-none bg-[linear-gradient(90deg,rgba(18,16,20,0.92)_0%,rgba(18,16,20,0.72)_35%,rgba(18,16,20,0.15)_70%,transparent_90%)] sm:bg-[linear-gradient(90deg,rgba(18,16,20,0.82)_0%,rgba(18,16,20,0.45)_14%,rgba(18,16,20,0.08)_28%,transparent_36%)]"
+          className="absolute inset-0 pointer-events-none bg-[linear-gradient(180deg,rgba(18,16,20,0.6)_0%,rgba(18,16,20,0.25)_38%,rgba(18,16,20,0.55)_70%,rgba(18,16,20,0.85)_100%)] sm:bg-[linear-gradient(90deg,rgba(18,16,20,0.82)_0%,rgba(18,16,20,0.45)_14%,rgba(18,16,20,0.08)_28%,transparent_36%)]"
           aria-hidden
         />
         <div

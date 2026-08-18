@@ -34,7 +34,7 @@ export default function RunningCount() {
     return () => clearTimeout(timerId);
   }, []);
 
-  if (count === null) return null;
+  if (count === null || count === 0) return null;
 
   return (
     <div className="inline-flex items-center gap-2 text-xs sm:text-sm text-cream-ink/60 mt-3 transition-opacity duration-500 opacity-100">
