@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "RakhiBox — design a 3D rakhi and send a gift-box moment";
+export const alt = "Make Your Rakhi — design a 3D rakhi and send a gift-box moment";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -72,13 +72,13 @@ export default async function Image() {
         <div
           style={{
             display: "flex",
-            fontSize: 76,
+            fontSize: 64,
             fontWeight: 700,
             color: "#f5f3f1",
             letterSpacing: -1,
           }}
         >
-          RakhiBox
+          Make Your Rakhi
         </div>
         <div
           style={{

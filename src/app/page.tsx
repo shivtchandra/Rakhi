@@ -41,7 +41,7 @@ const CHARMS = ["om", "heart", "initial", "gem", "om", "heart", "initial", "gem"
 function Wordmark({ className = "" }: { className?: string }) {
   return (
     <span className={`font-display text-2xl tracking-tight ${className}`}>
-      Rakhi<span className="text-lacquer-bright">Box</span>
+      Make Your <span className="text-lacquer-bright">Rakhi</span>
     </span>
   );
 }

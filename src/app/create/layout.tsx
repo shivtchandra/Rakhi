@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     canonical: "/create",
   },
   openGraph: {
-    title: "Design your Rakhi | RakhiBox",
+    title: "Design your Rakhi | Make Your Rakhi",
     description: "Pick a style, stones, thread colour and charm — your 3D rakhi turns as you build it.",
     url: "/create",
   },

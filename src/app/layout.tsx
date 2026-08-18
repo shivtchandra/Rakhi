@@ -20,8 +20,8 @@ export const viewport = {
 };
 
 const SITE_URL = "https://www.makeyourrakhi.in";
-const SITE_NAME = "RakhiBox";
-const SITE_TITLE = "RakhiBox - Not just a message. A moment.";
+const SITE_NAME = "Make Your Rakhi";
+const SITE_TITLE = "Make Your Rakhi - Not just a message. A moment.";
 const SITE_DESCRIPTION =
   "Design a kundan rakhi in 3D and send a cinematic gift-box experience your sibling opens on their phone.";
 
