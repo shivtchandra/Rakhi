@@ -55,8 +55,7 @@ export default function Home() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/hero-festival.png"
-          alt=""
-          aria-hidden
+          alt="Sister tying a rakhi on her brother's wrist for Raksha Bandhan, with a diya lit beside them"
           className="absolute inset-0 w-full h-full object-cover object-[78%_65%] sm:object-[56%_center] scale-110 origin-center brightness-100 sm:brightness-90"
         />
         {/* Soft left vignette only — smooth fade, no hard edge over the figures */}
@@ -138,8 +137,7 @@ export default function Home() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/rakhi-street.webp"
-            alt=""
-            aria-hidden
+            alt="A festive street market decorated for Raksha Bandhan, stalls selling colourful rakhi and sweets"
             className="absolute inset-0 w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-plum/85 via-plum/15 to-transparent" />

@@ -9,6 +9,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 1,
+      images: [`${BASE_URL}/hero-festival.png`, `${BASE_URL}/rakhi-street.webp`],
     },
     {
       url: `${BASE_URL}/create`,
