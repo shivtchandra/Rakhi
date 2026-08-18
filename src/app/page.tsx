@@ -56,7 +56,7 @@ export default function Home() {
           src="/hero-festival.png"
           alt=""
           aria-hidden
-          className="absolute inset-0 w-full h-full object-cover object-[60%_center] sm:object-[56%_center] scale-110 origin-center brightness-100 sm:brightness-90"
+          className="absolute inset-0 w-full h-full object-cover object-[78%_65%] sm:object-[56%_center] scale-110 origin-center brightness-100 sm:brightness-90"
         />
         {/* Soft left vignette only — smooth fade, no hard edge over the figures */}
         <div
