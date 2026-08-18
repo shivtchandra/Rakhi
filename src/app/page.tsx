@@ -206,6 +206,10 @@ export default function Home() {
               A gift box floats in the dark. One tap, the lid lifts, the rakhi rises under a
               spotlight, and your message settles in.
             </p>
+            <p className="mt-3 text-cream-ink/45 text-sm">
+              Ordering something to ship? Courier cutoffs are already tight — this arrives the
+              moment you hit send.
+            </p>
             <div className="flex flex-col items-center gap-2">
               <Link href="/create" className="btn-pill mt-10">
                 Design your rakhi
