@@ -39,6 +39,39 @@ const STYLE_SUB: Record<RakhiStyle, string> = {
 
 const CHARMS = ["om", "heart", "initial", "gem", "om", "heart", "initial", "gem", "om"] as const;
 
+const FAQS = [
+  {
+    q: "When is Raksha Bandhan 2026?",
+    a: "Raksha Bandhan 2026 falls on Friday, 28 August 2026.",
+  },
+  {
+    q: "Is sending a rakhi online free?",
+    a: "Yes. Designing your 3D rakhi and sharing it as a gift-box link is completely free.",
+  },
+  {
+    q: "Does this work for a sibling living abroad?",
+    a: "Yes. There's no shipping involved — the link works the same whether your sibling is next door or overseas.",
+  },
+  {
+    q: "What does my sibling actually receive?",
+    a: "A private link that opens as an animated gift-box reveal on their phone — the lid lifts, your 3D rakhi rises, and your message settles in.",
+  },
+  {
+    q: "Can I still send a real shagun gift, not just the rakhi?",
+    a: "Yes. You can add your UPI ID when creating your rakhi, and your sibling gets a one-tap option to send shagun once they accept it.",
+  },
+] as const;
+
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQS.map((f) => ({
+    "@type": "Question",
+    name: f.q,
+    acceptedAnswer: { "@type": "Answer", text: f.a },
+  })),
+};
+
 function Wordmark({ className = "" }: { className?: string }) {
   return (
     <span className={`font-display text-2xl tracking-tight ${className}`}>
@@ -56,6 +89,9 @@ export default function Home() {
         <img
           src="/hero-festival.png"
           alt="Sister tying a rakhi on her brother's wrist for Raksha Bandhan, with a diya lit beside them"
+          fetchPriority="high"
+          loading="eager"
+          decoding="sync"
           className="absolute inset-0 w-full h-full object-cover object-[78%_65%] sm:object-[56%_center] scale-110 origin-center brightness-100 sm:brightness-90"
         />
         {/* Soft left vignette only — smooth fade, no hard edge over the figures */}
@@ -218,6 +254,29 @@ export default function Home() {
               <ShareSiteButton className="text-cream-ink/60 hover:text-cream-ink" />
             </div>
           </Reveal>
+        </div>
+      </section>
+
+      {/* 5b. FAQ */}
+      <section className="page-shell py-20 sm:py-28">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
+        <Reveal>
+          <h2 className="font-display text-4xl sm:text-5xl max-w-xl leading-tight">
+            Questions, answered.
+          </h2>
+        </Reveal>
+        <div className="mt-12 max-w-2xl border-t border-ink/10">
+          {FAQS.map((f, i) => (
+            <Reveal key={f.q} delay={i * 60}>
+              <div className="py-6 border-b border-ink/10">
+                <h3 className="font-display text-xl sm:text-2xl">{f.q}</h3>
+                <p className="mt-2 text-ink/65 leading-relaxed text-[15px]">{f.a}</p>
+              </div>
+            </Reveal>
+          ))}
         </div>
       </section>
 

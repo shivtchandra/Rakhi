@@ -59,6 +59,15 @@ const jsonLd = {
   description: SITE_DESCRIPTION,
 };
 
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: SITE_NAME,
+  url: SITE_URL,
+  logo: `${SITE_URL}/apple-icon`,
+  description: SITE_DESCRIPTION,
+};
+
 const eventJsonLd = {
   "@context": "https://schema.org",
   "@type": "Event",
@@ -89,6 +98,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
         />
         <script
           type="application/ld+json"
