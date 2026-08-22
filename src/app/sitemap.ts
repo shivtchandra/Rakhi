@@ -24,6 +24,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly",
       priority: 0.8,
     },
+    {
+      url: `${BASE_URL}/send-rakhi-without-shipping`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
     ...STYLES.map((s) => ({
       url: `${BASE_URL}/gallery/${s.id}`,
       lastModified: new Date(),

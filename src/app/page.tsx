@@ -260,7 +260,10 @@ export default function Home() {
             </p>
             <p className="mt-3 text-cream-ink/45 text-sm">
               Ordering something to ship? Courier cutoffs are already tight — this arrives the
-              moment you hit send.
+              moment you hit send.{" "}
+              <Link href="/send-rakhi-without-shipping" className="underline underline-offset-2 hover:text-cream-ink/70">
+                Here's how.
+              </Link>
             </p>
             <div className="flex flex-col items-center gap-2">
               <Link href="/create" className="btn-pill mt-10">
