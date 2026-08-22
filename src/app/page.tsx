@@ -204,7 +204,7 @@ export default function Home() {
             {STYLES.map((s, i) => (
               <Reveal key={s.id} delay={i * 60} className="h-full">
                 <Link
-                  href="/create"
+                  href={`/gallery/${s.id}`}
                   className="group soft-shell flex flex-col gap-4 p-6 h-full transition duration-200 hover:-translate-y-0.5 hover:border-lacquer/22 hover:shadow-[0_16px_48px_-20px_rgba(185,28,44,0.22)]"
                 >
                   <div

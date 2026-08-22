@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import RakhiStage from "@/components/RakhiStage";
 import RakhiSVG from "@/components/RakhiSVG";
@@ -131,6 +131,13 @@ export default function CreatePage() {
   const [link, setLink] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const songInput = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const styleParam = new URLSearchParams(window.location.search).get("style");
+    if (styleParam && STYLES.some((s) => s.id === styleParam)) {
+      setStyle(styleParam as RakhiStyle);
+    }
+  }, []);
 
   async function handleGenerate() {
     if (!message.trim()) {

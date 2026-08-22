@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { STYLES } from "@/data/styles";
 
 const BASE_URL = "https://www.makeyourrakhi.in";
 
@@ -17,5 +18,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly",
       priority: 0.9,
     },
+    {
+      url: `${BASE_URL}/gallery`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    ...STYLES.map((s) => ({
+      url: `${BASE_URL}/gallery/${s.id}`,
+      lastModified: new Date(),
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+      images: [`${BASE_URL}/gallery/${s.id}.png`],
+    })),
   ];
 }
