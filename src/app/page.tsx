@@ -62,6 +62,18 @@ const FAQS = [
   },
 ] as const;
 
+const howToJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  name: "How to send a rakhi online",
+  description: "Design a 3D rakhi and send it as a digital gift-box link for Raksha Bandhan — no shipping needed.",
+  step: STEPS.map((s) => ({
+    "@type": "HowToStep",
+    name: s.title,
+    text: s.body,
+  })),
+};
+
 const faqJsonLd = {
   "@context": "https://schema.org",
   "@type": "FAQPage",
@@ -147,6 +159,10 @@ export default function Home() {
 
       {/* 2. HOW IT WORKS - vertical numbered list */}
       <section className="page-shell py-20 sm:py-28">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(howToJsonLd) }}
+        />
         <Reveal>
           <h2 className="font-display text-4xl sm:text-5xl max-w-xl leading-tight">
             Three steps, and the distance disappears.
