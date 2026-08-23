@@ -1,0 +1,27 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /rakhis/{rakhiId} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if rakhiId.matches('^[A-Za-z0-9_-]{8}$')
+        && request.resource.data.keys().hasAll([
+          'id', 'style', 'threadColor', 'beadColor', 'charm', 'name', 'message', 'createdAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'id', 'style', 'threadColor', 'beadColor', 'charm', 'name', 'message',
+          'recipientName', 'recipientType', 'senderName', 'source', 'parentRakhiId',
+          'spotifyEmbedUrl', 'songName', 'upiId', 'createdAt'
+        ])
+        && request.resource.data.id == rakhiId
+        && request.resource.data.message is string
+        && request.resource.data.message.size() > 0
+        && request.resource.data.message.size() <= 200
+        && (!request.resource.data.keys().hasAny(['recipientName']) || request.resource.data.recipientName.size() <= 40)
+        && (!request.resource.data.keys().hasAny(['senderName']) || request.resource.data.senderName.size() <= 40);
+      allow update, delete: if false;
+    }
+  }
+}
+

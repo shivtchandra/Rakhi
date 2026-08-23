@@ -1,11 +1,13 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import RakhiSVG from "@/components/RakhiSVG";
 import Reveal from "@/components/Reveal";
 import { STYLES, type RakhiStyle } from "@/data/styles";
 import RunningCount from "@/components/RunningCount";
 import ShareSiteButton from "@/components/ShareSiteButton";
+import { trackFunnel } from "@/lib/analytics";
 
 const STEPS = [
   {
@@ -16,7 +18,7 @@ const STEPS = [
   {
     n: "02",
     title: "Send",
-    body: "Add a message and generate one private link. Share it on WhatsApp in seconds — no shipping, works for siblings abroad too.",
+    body: "Add a message and generate one gift link. Share it on WhatsApp in seconds. No shipping required, and it works abroad too.",
   },
   {
     n: "03",
@@ -50,11 +52,11 @@ const FAQS = [
   },
   {
     q: "Does this work for a sibling living abroad?",
-    a: "Yes. There's no shipping involved — the link works the same whether your sibling is next door or overseas.",
+    a: "Yes. There is no shipping involved. The link works the same whether your sibling is next door or overseas.",
   },
   {
     q: "What does my sibling actually receive?",
-    a: "A private link that opens as an animated gift-box reveal on their phone — the lid lifts, your 3D rakhi rises, and your message settles in.",
+    a: "A gift link that opens as an animated reveal on their phone. The lid lifts, your 3D Rakhi rises, and your message appears.",
   },
   {
     q: "Can I still send a real shagun gift, not just the rakhi?",
@@ -66,7 +68,7 @@ const howToJsonLd = {
   "@context": "https://schema.org",
   "@type": "HowTo",
   name: "How to send a rakhi online",
-  description: "Design a 3D rakhi and send it as a digital gift-box link for Raksha Bandhan — no shipping needed.",
+  description: "Design a 3D Rakhi and send it as a digital gift-box link for Raksha Bandhan. No shipping needed.",
   step: STEPS.map((s) => ({
     "@type": "HowToStep",
     name: s.title,
@@ -93,6 +95,11 @@ function Wordmark({ className = "" }: { className?: string }) {
 }
 
 export default function Home() {
+  useEffect(() => {
+    const source = new URLSearchParams(window.location.search).get("utm_source") || "direct";
+    trackFunnel("landing_view", { source });
+  }, []);
+
   return (
     <div className="flex-1 bg-paper text-ink">
       {/* 1. HERO - full-bleed image */}
@@ -127,31 +134,34 @@ export default function Home() {
             </Link>
           </nav>
 
-          <div className="flex-1 flex items-center pt-4 pb-16">
+          <div className="flex-1 grid items-center gap-8 pt-4 pb-10 lg:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[minmax(0,1fr)_310px]">
             <div className="max-w-xl flex flex-col items-start text-left hero-shadow">
               <p className="text-[10px] sm:text-xs tracking-[0.24em] sm:tracking-[0.28em] uppercase text-lacquer-bright mb-4 sm:mb-5 -ml-[0.14em]">
                 Raksha Bandhan 2026 · Aug 28
               </p>
-              <h1 className="hero-rise font-display leading-[1.05] sm:leading-[1.1] text-[2.1rem] min-[380px]:text-[2.5rem] sm:text-6xl lg:text-7xl pb-1 w-full">
-                {["Not just a message.", "A moment."].map((l, i) => (
-                  <div key={l} className="overflow-hidden">
-                    <div className={`line-inner ${i === 1 ? "italic text-lacquer-bright" : ""}`}>
-                      {l}
-                    </div>
-                  </div>
-                ))}
+              <h1 className="hero-rise font-display leading-[1.08] text-[2.1rem] min-[380px]:text-[2.5rem] lg:text-[2.7rem] pb-1 w-full">
+                <span className="block">Send a Rakhi surprise.</span>
+                <span className="block italic text-lacquer-bright pb-1">WhatsApp it in 60 seconds.</span>
               </h1>
               <p className="mt-5 sm:mt-7 max-w-md text-cream-ink/80 leading-relaxed text-sm sm:text-base hidden sm:block">
-                Design and make your own 3D rakhi online, then send it as a digital gift-box link —
-                no shipping, no waiting, arrives instantly for siblings anywhere in India or abroad.
+                They tap your link, open a gift box, and discover the Rakhi and message you made for them.
               </p>
-              <div className="mt-7 sm:mt-9 flex flex-col items-start gap-2">
-                <Link href="/create" className="btn-pill">
-                  Design your rakhi
-                </Link>
+              <div className="mt-7 sm:mt-9 flex flex-col items-start gap-3">
+                <div className="flex flex-wrap gap-3">
+                  <Link href="/r/demo" onClick={() => trackFunnel("demo_opened", { source: "homepage" })} className="btn-pill">
+                    Open demo surprise
+                  </Link>
+                  <Link href="/create?source=homepage" className="inline-flex items-center justify-center rounded-full border border-cream-ink/35 bg-plum/30 px-6 py-3 text-sm font-medium text-cream-ink backdrop-blur-sm transition hover:bg-cream-ink/10 active:scale-[0.98]">
+                    Make one now
+                  </Link>
+                </div>
+                <p className="text-xs text-cream-ink/70">Free. No signup. Opens on any phone.</p>
                 <RunningCount />
                 <ShareSiteButton className="text-cream-ink/60 hover:text-cream-ink mt-1" />
               </div>
+            </div>
+            <div className="hidden lg:block justify-self-end overflow-hidden rounded-[2rem] border border-cream-ink/20 bg-plum shadow-2xl" aria-label="Live preview of the Rakhi gift opening">
+              <iframe src="/r/demo?preview=1" title="Rakhi gift opening preview" tabIndex={-1} className="pointer-events-none h-[500px] w-[280px] xl:w-[310px]" />
             </div>
           </div>
         </div>
@@ -209,10 +219,10 @@ export default function Home() {
         <div className="page-shell">
           <Reveal>
             <h2 className="font-display text-4xl sm:text-5xl max-w-xl leading-tight">
-              Five styles. Yours to shape.
+              Nine styles. Yours to shape.
             </h2>
             <p className="mt-4 max-w-lg text-ink/60 text-[15px] leading-relaxed">
-              Pick a starting point — thread, stones, and charm are all customisable in 3D.
+              Pick a starting point. Thread, stones, and charm are all customisable in 3D.
             </p>
           </Reveal>
 
@@ -259,10 +269,10 @@ export default function Home() {
               spotlight, and your message settles in.
             </p>
             <p className="mt-3 text-cream-ink/45 text-sm">
-              Ordering something to ship? Courier cutoffs are already tight — this arrives the
+              Ordering something to ship? Courier cutoffs are already tight. This arrives the
               moment you hit send.{" "}
               <Link href="/send-rakhi-without-shipping" className="underline underline-offset-2 hover:text-cream-ink/70">
-                Here's how.
+                Here&apos;s how.
               </Link>
             </p>
             <div className="flex flex-col items-center gap-2">

@@ -21,7 +21,7 @@ type IconName = "leaf" | "send" | "lock" | "screen";
 const TRUST: { icon: IconName; title: string; sub: string }[] = [
   { icon: "leaf", title: "100% Digital", sub: "Eco-friendly" },
   { icon: "send", title: "Instant Delivery", sub: "Share in seconds" },
-  { icon: "lock", title: "Private & Secure", sub: "Only they can view" },
+  { icon: "lock", title: "Personal & Direct", sub: "One link to share" },
   { icon: "screen", title: "Works Everywhere", sub: "Mobile, tablet, desktop" },
 ];
 

@@ -17,6 +17,8 @@ import {
 import { createRakhi, isFirebaseConfigured } from "@/lib/rakhi";
 import { fileToDataUrl, MAX_SONG_BYTES } from "@/lib/songStore";
 import { toSpotifyEmbedUrl } from "@/lib/spotify";
+import { trackFunnel } from "@/lib/analytics";
+import { isValidUpi, normalizeUpi } from "@/lib/upi";
 
 const STYLE_CHARMS: Charm[] = ["om", "heart", "initial", "gem", "om", "heart", "initial", "gem", "om"];
 const CHARM_ICON: Record<Charm, string> = {
@@ -115,108 +117,144 @@ function Footer() {
   );
 }
 
+type RecipientType = "brother" | "sister" | "cousin" | "chosen-sibling";
+
+const RECIPIENTS: { id: RecipientType; label: string }[] = [
+  { id: "brother", label: "Brother" },
+  { id: "sister", label: "Sister" },
+  { id: "cousin", label: "Cousin" },
+  { id: "chosen-sibling", label: "Chosen sibling" },
+];
+
+const MESSAGE_TEMPLATES = [
+  { label: "Emotional", text: "No matter how far life takes us, you will always feel like home. Happy Raksha Bandhan." },
+  { label: "Funny", text: "You are still the most annoying person I would protect without thinking twice. Happy Rakhi." },
+  { label: "Long-distance", text: "Miles can change the view, not our bond. Sending this little Rakhi moment until we meet again." },
+  { label: "Hindi / Hinglish", text: "Door ho, par dil ke hamesha paas ho. Happy Rakhi, meri favourite problem." },
+  { label: "Custom", text: "" },
+] as const;
+
 export default function CreatePage() {
+  const [step, setStep] = useState(1);
+  const [recipientType, setRecipientType] = useState<RecipientType>("brother");
+  const [recipientName, setRecipientName] = useState("");
+  const [senderName, setSenderName] = useState("");
   const [style, setStyle] = useState<RakhiStyle>("traditional");
   const [threadColor, setThreadColor] = useState(DEFAULT_THREAD_COLOR);
   const [beadColor, setBeadColor] = useState(DEFAULT_BEAD_COLOR);
   const [charm, setCharm] = useState<Charm>("om");
   const [name, setName] = useState("");
-  const [message, setMessage] = useState("Happy Rakhi, bhai.");
-  const [upiId, setUpiId] = useState('');
+  const [message, setMessage] = useState<string>(MESSAGE_TEMPLATES[0].text);
+  const [upiId, setUpiId] = useState("");
   const [songName, setSongName] = useState<string | null>(null);
   const [songDataUrl, setSongDataUrl] = useState<string | null>(null);
   const [spotifyInput, setSpotifyInput] = useState("");
   const [spotifyEmbedUrl, setSpotifyEmbedUrl] = useState<string | null>(null);
+  const [advanced, setAdvanced] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [link, setLink] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [source, setSource] = useState("direct");
+  const [parentRakhiId, setParentRakhiId] = useState("");
   const songInput = useRef<HTMLInputElement>(null);
+  const started = useRef(false);
 
   useEffect(() => {
-    const styleParam = new URLSearchParams(window.location.search).get("style");
-    if (styleParam && STYLES.some((s) => s.id === styleParam)) {
-      setStyle(styleParam as RakhiStyle);
+    const params = new URLSearchParams(window.location.search);
+    const styleParam = params.get("style");
+    const recipientParam = params.get("recipient");
+    const initialSource = params.get("source") || "direct";
+    const timer = window.setTimeout(() => {
+      if (styleParam && STYLES.some((item) => item.id === styleParam)) setStyle(styleParam as RakhiStyle);
+      if (recipientParam && RECIPIENTS.some((item) => item.id === recipientParam)) setRecipientType(recipientParam as RecipientType);
+      setSource(initialSource);
+      setParentRakhiId(params.get("parent") || "");
+    }, 0);
+    if (!started.current) {
+      started.current = true;
+      trackFunnel("create_started", { source: initialSource, is_recipient_loop: initialSource === "recipient_loop" });
     }
+    return () => window.clearTimeout(timer);
   }, []);
 
+  function advance() {
+    if (step === 1 && !recipientName.trim()) {
+      setError("Add their name to continue.");
+      return;
+    }
+    if (step === 3 && !message.trim()) {
+      setError("Add a message to continue.");
+      return;
+    }
+    setError(null);
+    trackFunnel("create_step_completed", { step, recipient_type: recipientType, template: style, source });
+    setStep((value) => Math.min(4, value + 1));
+  }
+
   async function handleGenerate() {
-    if (!message.trim()) {
-      setError("Add a message before sending.");
+    if (!recipientName.trim() || !message.trim()) {
+      setError("Add their name and a message before creating your Rakhi.");
+      trackFunnel("generation_failed", { error_code: "validation", recipient_type: recipientType });
+      return;
+    }
+    if (!isValidUpi(upiId)) {
+      setError("Enter a valid UPI ID or 10-digit mobile number.");
+      trackFunnel("generation_failed", { error_code: "validation", recipient_type: recipientType });
       return;
     }
     setError(null);
     setSubmitting(true);
     try {
       const id = await createRakhi({
-        style,
-        threadColor,
-        beadColor,
-        charm,
-        name,
-        message,
+        style, threadColor, beadColor, charm, name, message: message.trim(),
+        recipientName: recipientName.trim(), recipientType,
+        ...(senderName.trim() ? { senderName: senderName.trim() } : {}),
+        ...(source ? { source } : {}),
+        ...(parentRakhiId ? { parentRakhiId } : {}),
         ...(songName && songDataUrl ? { songName, songDataUrl } : {}),
         ...(spotifyEmbedUrl ? { spotifyEmbedUrl } : {}),
-        ...(upiId ? { upiId } : {}),
+        ...(upiId ? { upiId: normalizeUpi(upiId) } : {}),
       });
       setLink(`${window.location.origin}/r/${id}`);
-    } catch (err) {
-      console.error(err);
-      setError("Couldn't create your rakhi. Try again.");
+      trackFunnel("rakhi_generated", {
+        recipient_type: recipientType, template: style, source,
+        has_song: Boolean(songName || spotifyEmbedUrl), has_upi: Boolean(upiId),
+        is_recipient_loop: source === "recipient_loop",
+        storage_mode: id.startsWith("v2_") || id.startsWith("v1_") ? "embedded" : "firebase",
+      });
+    } catch {
+      setError("We couldn't create your Rakhi. Your design is safe, so please try again.");
+      trackFunnel("generation_failed", { error_code: "storage", recipient_type: recipientType });
     } finally {
       setSubmitting(false);
     }
   }
 
   if (link) {
+    const shareText = `${senderName.trim() || "Someone"} made you a Rakhi surprise. Tap to open: ${link}`;
     return (
       <div className="flex-1 flex flex-col bg-paper">
         <Header />
-        <main className="page-shell flex-1 flex flex-col items-center justify-center gap-6 py-16 text-center">
-          <h1 className="font-display text-4xl sm:text-5xl text-ink leading-tight">Your rakhi is ready</h1>
-          <p className="text-[15px] text-ink/60 leading-relaxed">Share this link. It opens as a gift.</p>
-          {!isFirebaseConfigured() && (
-            <p className="text-xs text-ink/45 max-w-sm">
-              Link includes your design (no cloud DB yet). Works across phones. Attached audio
-              files stay on this device — use Spotify for songs that travel.
-            </p>
-          )}
-          <div className="flex items-center gap-3 pill-shell px-5 py-3 shadow-sm max-w-full">
-            <code className="text-sm text-ink max-w-[55vw] truncate">{link}</code>
-            <button
-              type="button"
-              onClick={() => navigator.clipboard.writeText(link)}
-              className="shrink-0 rounded-full bg-lacquer text-white text-xs font-medium px-4 py-1.5 hover:bg-lacquer-deep"
-            >
-              Copy
-            </button>
-          </div>
-          <div className="flex flex-wrap justify-center gap-3">
+        <main className="page-shell flex-1 grid place-items-center py-12">
+          <section className="soft-shell w-full max-w-2xl p-7 sm:p-12 text-center shadow-[0_20px_70px_-30px_rgba(185,28,44,0.28)]">
+            <p className="text-xs tracking-[0.22em] uppercase text-lacquer">Ready to send</p>
+            <h1 className="font-display text-4xl sm:text-5xl text-ink mt-3">Your Rakhi is ready</h1>
+            <p className="mt-3 text-ink/60">Send it to {recipientName}. It opens as a gift on any phone.</p>
             <a
-              href={`https://wa.me/?text=${encodeURIComponent(`I made you a rakhi. Open it on your phone: ${link}`)}`}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-full bg-[#25D366] text-white px-6 py-2.5 text-sm font-medium hover:brightness-95"
-            >
-              Share on WhatsApp
-            </a>
-            {typeof navigator !== "undefined" && !!navigator.share && (
-              <button
-                type="button"
-                onClick={() =>
-                  navigator.share({ title: "I made you a rakhi", text: "Open it on your phone", url: link }).catch(() => {})
-                }
-                className="rounded-full border border-lacquer/30 text-lacquer px-6 py-2.5 text-sm font-medium hover:bg-lacquer-soft"
-              >
-                More share options
-              </button>
-            )}
-            <a
-              href={link}
-              className="rounded-full border border-lacquer/30 text-lacquer px-6 py-2.5 text-sm font-medium hover:bg-lacquer-soft"
-            >
-              Preview it
-            </a>
-          </div>
+              href={`https://wa.me/?text=${encodeURIComponent(shareText)}`}
+              target="_blank" rel="noreferrer"
+              onClick={() => trackFunnel("whatsapp_share_clicked", { recipient_type: recipientType, template: style, source })}
+              className="mt-8 inline-flex min-h-14 items-center justify-center rounded-full bg-[#16883f] px-8 text-white font-semibold transition hover:bg-[#117035] active:scale-[0.98]"
+            >Share on WhatsApp</a>
+            <div className="mt-5 flex flex-wrap justify-center gap-3">
+              <button type="button" onClick={() => navigator.clipboard.writeText(link)} className="rounded-full border border-lacquer/25 px-5 py-2.5 text-sm text-lacquer hover:bg-lacquer-soft">Copy link</button>
+              {typeof navigator !== "undefined" && !!navigator.share && (
+                <button type="button" onClick={() => { trackFunnel("native_share_clicked", { recipient_type: recipientType, source }); navigator.share({ title: "A Rakhi surprise", text: shareText, url: link }).catch(() => {}); }} className="rounded-full border border-lacquer/25 px-5 py-2.5 text-sm text-lacquer hover:bg-lacquer-soft">More options</button>
+              )}
+              <a href={link} className="rounded-full border border-lacquer/25 px-5 py-2.5 text-sm text-lacquer hover:bg-lacquer-soft">Preview gift</a>
+            </div>
+            {!isFirebaseConfigured() && <p className="mt-5 text-xs text-ink/45">This link contains the design so it still works across phones. Uploaded audio stays on this device.</p>}
+          </section>
         </main>
         <Footer />
       </div>
@@ -226,263 +264,57 @@ export default function CreatePage() {
   return (
     <div className="flex-1 flex flex-col bg-paper">
       <Header />
-      <main className="page-shell pb-10 pt-1 lg:pt-2">
-        <div className="grid lg:grid-cols-2 gap-6 lg:gap-8 items-start">
-        <RakhiStage style={style} threadColor={threadColor} beadColor={beadColor} charm={charm} initial={name} />
-
-        <div className="soft-shell p-6 sm:p-8 flex flex-col gap-7 shadow-[0_16px_48px_-20px_rgba(185,28,44,0.12)]">
+      <main className="page-shell pb-12 pt-2">
+        <div className="mb-5 flex items-center justify-between gap-4">
           <div>
-            <p className="text-xs tracking-[0.28em] uppercase text-lacquer-bright -ml-[0.14em]">Create</p>
-            <h1 className="font-display text-4xl sm:text-[2.75rem] leading-tight text-ink mt-3">Design your rakhi</h1>
-            <p className="mt-3 text-[15px] text-ink/60 leading-relaxed max-w-md">Thread, stones, charm, colour — it turns as you build.</p>
+            <p className="text-sm text-lacquer font-medium">{step} of 4</p>
+            <h1 className="font-display text-3xl sm:text-4xl text-ink">Make their Rakhi surprise</h1>
           </div>
-
-          <div>
-            <label className="text-xs font-medium tracking-[0.12em] uppercase text-ink/50">
-              Style
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
-              {STYLES.map((s, i) => {
-                const on = style === s.id;
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => setStyle(s.id)}
-                    className={`flex items-center gap-3 rounded-[1.5rem] border p-4 text-left transition duration-200 ${
-                      on
-                        ? "border-lacquer/25 bg-white ring-1 ring-lacquer/20 shadow-[0_12px_36px_-16px_rgba(185,28,44,0.2)]"
-                        : "border-ink/10 bg-white/70 hover:border-lacquer/20 hover:-translate-y-0.5"
-                    }`}
-                  >
-                    <div
-                      className="w-14 h-14 shrink-0 grid place-items-center rounded-full bg-white border border-lacquer/10 shadow-sm"
-                    >
-                      <RakhiSVG
-                        style={s.id}
-                        threadColor="#B91C2C"
-                        beadColor="#E4C878"
-                        charm={STYLE_CHARMS[i]}
-                        initial="R"
-                        className="w-10 h-10"
-                      />
-                    </div>
-                    <span className="leading-tight min-w-0">
-                      <span className="block font-display text-lg leading-tight text-ink">
-                        {s.label}
-                      </span>
-                      <span className="block text-sm text-ink/55 mt-0.5">{s.blurb}</span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="text-xs font-medium tracking-[0.12em] uppercase text-ink/50">Thread color</label>
-              <Swatches colors={THREAD_SWATCHES} value={threadColor} onChange={setThreadColor} />
-            </div>
-            <div>
-              <label className="text-xs font-medium tracking-[0.12em] uppercase text-ink/50">Bead color</label>
-              <Swatches colors={BEAD_SWATCHES} value={beadColor} onChange={setBeadColor} />
-            </div>
-          </div>
-
-          <div>
-            <label className="text-xs font-medium tracking-[0.12em] uppercase text-ink/50">Charm</label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
-              {CHARMS.map((c) => {
-                const on = charm === c.id;
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => setCharm(c.id)}
-                    className={`flex items-center justify-center gap-2 rounded-full border px-3 py-2.5 text-sm transition ${
-                      on
-                        ? "border-lacquer/25 bg-white text-ink ring-1 ring-lacquer/20 shadow-sm"
-                        : "border-ink/10 bg-white/70 text-ink/70 hover:border-lacquer/20"
-                    }`}
-                  >
-                    <span className="text-base">{CHARM_ICON[c.id]}</span>
-                    {c.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {charm === "initial" && (
-            <div>
-              <label className="text-xs font-medium tracking-[0.12em] uppercase text-ink/50" htmlFor="initial">
-                Initial
-              </label>
-              <input
-                id="initial"
-                value={name}
-                onChange={(e) => setName(e.target.value.slice(0, 1))}
-                maxLength={1}
-                className="block mt-2 w-16 rounded-full border border-ink/15 px-3 py-2 text-center bg-white focus:outline-none focus:ring-2 focus:ring-lacquer/30"
-              />
-            </div>
-          )}
-
-
-          <div>
-            <label className="text-xs font-medium tracking-[0.12em] uppercase text-ink/50">Song (optional</label>
-            <p className="text-xs text-ink/45 mt-0.5">
-              Paste a Spotify link, or attach an audio file. Plays when they open the gift.
-            </p>
-            <div className="mt-2 flex flex-col gap-3">
-              <div className="flex gap-2">
-                <input
-                  type="url"
-                  value={spotifyInput}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setSpotifyInput(value);
-                    const embed = toSpotifyEmbedUrl(value);
-                    if (embed) {
-                      setSpotifyEmbedUrl(embed);
-                      setSongName(null);
-                      setSongDataUrl(null);
-                      setError(null);
-                    } else if (value.trim()) {
-                      setSpotifyEmbedUrl(null);
-                    } else {
-                      setSpotifyEmbedUrl(null);
-                    }
-                  }}
-                  onBlur={() => {
-                    if (spotifyInput.trim() && !toSpotifyEmbedUrl(spotifyInput)) {
-                      setError("That does not look like a Spotify song link.");
-                    }
-                  }}
-                  className="flex-1 min-w-0 rounded-full border border-ink/15 px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-lacquer/30"
-                  aria-label="Spotify song link"
-                />
-                {spotifyEmbedUrl && (
-                  <button
-                    type="button"
-                    aria-label="Clear Spotify link"
-                    onClick={() => {
-                      setSpotifyInput("");
-                      setSpotifyEmbedUrl(null);
-                    }}
-                    className="shrink-0 rounded-full border border-ink/10 text-ink/50 px-3 hover:text-lacquer"
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-              {spotifyEmbedUrl && (
-                <p className="text-xs text-lacquer">Spotify track ready</p>
-              )}
-
-              <div className="flex flex-wrap items-center gap-3">
-                <input
-                  ref={songInput}
-                  type="file"
-                  accept="audio/mpeg,audio/mp4,audio/aac,audio/wav,audio/*"
-                  className="sr-only"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    e.target.value = "";
-                    if (!file) return;
-                    if (file.size > MAX_SONG_BYTES) {
-                      setError("Song is too large. Keep it under 2.5 MB.");
-                      return;
-                    }
-                    try {
-                      const dataUrl = await fileToDataUrl(file);
-                      setSongName(file.name);
-                      setSongDataUrl(dataUrl);
-                      setSpotifyInput("");
-                      setSpotifyEmbedUrl(null);
-                      setError(null);
-                    } catch {
-                      setError("Couldn't read that audio file.");
-                    }
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => songInput.current?.click()}
-                  className="rounded-full border border-lacquer/30 text-lacquer text-sm px-4 py-2 hover:bg-lacquer-soft"
-                >
-                  {songName ? "Change file" : "Or attach a file"}
-                </button>
-                {songName && (
-                  <span className="inline-flex items-center gap-2 rounded-full bg-lacquer-soft text-ink text-sm px-3 py-1.5 max-w-full">
-                    <span className="truncate max-w-[12rem]">{songName}</span>
-                    <button
-                      type="button"
-                      aria-label="Remove song file"
-                      onClick={() => {
-                        setSongName(null);
-                        setSongDataUrl(null);
-                      }}
-                      className="text-lacquer font-semibold leading-none"
-                    >
-                      ×
-                    </button>
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-xs font-medium tracking-[0.12em] uppercase text-ink/50" htmlFor="message">
-              Message
-            </label>
-            <div className="relative mt-2">
-              <textarea
-                id="message"
-                value={message}
-                onChange={(e) => setMessage(e.target.value.slice(0, 200))}
-                rows={3}
-                placeholder="Happy Rakhi, bhai."
-                className="block w-full rounded-[1.25rem] border border-ink/15 px-4 py-3 resize-none bg-white focus:outline-none focus:ring-2 focus:ring-lacquer/30"
-              />
-              <span className="absolute bottom-2.5 right-4 text-[11px] text-ink/35">
-                {message.length} / 200
-              </span>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-xs font-medium tracking-[0.12em] uppercase text-ink/50">
-              Your UPI ID (optional)
-            </label>
-            <p className="text-xs text-ink/45 mt-0.5">
-              Add your UPI so your bhai can send shagun when they accept. E.g. <span className="font-mono">name@upi</span> or a phone number.
-            </p>
-            <input
-              type="text"
-              value={upiId}
-              onChange={(e) => setUpiId(e.target.value.trim())}
-              placeholder="name@upi or 9876543210"
-              className="block mt-2 w-full rounded-full border border-ink/15 px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-lacquer/30"
-            />
-          </div>
-
-          {error && <p className="text-sm text-lacquer">{error}</p>}
-
-          <div>
-            <button
-              type="button"
-              onClick={handleGenerate}
-              disabled={submitting}
-              className="btn-pill w-full"
-            >
-              {submitting ? "Creating..." : "Generate link"}
-            </button>
-
+          <div className="hidden sm:flex gap-1" aria-label={`Step ${step} of 4`}>
+            {[1, 2, 3, 4].map((item) => <span key={item} className={`h-1.5 w-10 rounded-full ${item <= step ? "bg-lacquer" : "bg-ink/10"}`} />)}
           </div>
         </div>
+
+        <div className="grid lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)] gap-6 lg:gap-8 items-start">
+          <div className="lg:sticky lg:top-4"><RakhiStage style={style} threadColor={threadColor} beadColor={beadColor} charm={charm} initial={name || recipientName.slice(0, 1)} /></div>
+          <section className="soft-shell p-6 sm:p-8 shadow-[0_16px_48px_-20px_rgba(185,28,44,0.12)]">
+            {step === 1 && <div className="space-y-6">
+              <div><h2 className="font-display text-3xl text-ink">Who is it for?</h2><p className="mt-2 text-sm text-ink/60">We will shape the message and opening around them.</p></div>
+              <div className="grid grid-cols-2 gap-3">{RECIPIENTS.map((item) => <button key={item.id} type="button" onClick={() => setRecipientType(item.id)} className={`rounded-[1.25rem] border p-4 text-left font-medium transition active:scale-[0.98] ${recipientType === item.id ? "border-lacquer bg-lacquer-soft text-lacquer-deep" : "border-ink/10 bg-white text-ink hover:border-lacquer/25"}`}>{item.label}</button>)}</div>
+              <div><label htmlFor="recipient-name" className="block text-sm font-medium text-ink">Their name</label><input id="recipient-name" autoFocus value={recipientName} onChange={(e) => setRecipientName(e.target.value.slice(0, 40))} className="mt-2 block w-full rounded-[1rem] border border-ink/15 bg-white px-4 py-3 text-ink focus:outline-none focus:ring-2 focus:ring-lacquer/30" /></div>
+              <div><label htmlFor="sender-name" className="block text-sm font-medium text-ink">Your name <span className="font-normal text-ink/50">(optional)</span></label><input id="sender-name" value={senderName} onChange={(e) => setSenderName(e.target.value.slice(0, 40))} className="mt-2 block w-full rounded-[1rem] border border-ink/15 bg-white px-4 py-3 text-ink focus:outline-none focus:ring-2 focus:ring-lacquer/30" /></div>
+            </div>}
+
+            {step === 2 && <div className="space-y-6">
+              <div><h2 className="font-display text-3xl text-ink">Choose their Rakhi</h2><p className="mt-2 text-sm text-ink/60">Start with a finished design. You can personalize every detail later.</p></div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">{STYLES.map((item, index) => <button key={item.id} type="button" onClick={() => setStyle(item.id)} className={`rounded-[1.25rem] border p-3 text-left transition active:scale-[0.98] ${style === item.id ? "border-lacquer bg-white ring-1 ring-lacquer/25" : "border-ink/10 bg-white/70 hover:border-lacquer/25"}`}><span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-paper"><RakhiSVG style={item.id} threadColor="#B91C2C" beadColor="#E4C878" charm={STYLE_CHARMS[index]} initial="R" className="h-12 w-12" /></span><span className="mt-2 block text-sm font-medium text-ink">{item.label}</span></button>)}</div>
+            </div>}
+
+            {step === 3 && <div className="space-y-6">
+              <div><h2 className="font-display text-3xl text-ink">Say what matters</h2><p className="mt-2 text-sm text-ink/60">Choose a starting point, then make it sound like you.</p></div>
+              <div className="flex flex-wrap gap-2">{MESSAGE_TEMPLATES.map((item) => <button key={item.label} type="button" onClick={() => setMessage(item.text)} className="rounded-full border border-lacquer/20 bg-white px-4 py-2 text-sm text-lacquer hover:bg-lacquer-soft">{item.label}</button>)}</div>
+              <div><label htmlFor="message" className="block text-sm font-medium text-ink">Your message</label><textarea id="message" value={message} onChange={(e) => setMessage(e.target.value.slice(0, 200))} rows={5} className="mt-2 block w-full rounded-[1.25rem] border border-ink/15 bg-white px-4 py-3 text-ink resize-none focus:outline-none focus:ring-2 focus:ring-lacquer/30" /><p className="mt-1 text-right text-xs text-ink/45">{message.length} / 200</p></div>
+            </div>}
+
+            {step === 4 && <div className="space-y-6">
+              <div><h2 className="font-display text-3xl text-ink">Ready to make the moment?</h2><p className="mt-2 text-sm text-ink/60">We will create a link for {recipientName}. No signup required.</p></div>
+              <div className="rounded-[1.25rem] bg-white border border-ink/10 p-5"><p className="text-sm text-ink/50">For {recipientName}</p><p className="mt-2 font-display italic text-xl text-ink">“{message}”</p><p className="mt-3 text-sm text-ink/50">{STYLES.find((item) => item.id === style)?.label}{senderName ? `, from ${senderName}` : ""}</p></div>
+              <button type="button" onClick={() => { setAdvanced((value) => !value); if (!advanced) trackFunnel("advanced_customization_opened", { recipient_type: recipientType, template: style, source }); }} className="text-sm font-medium text-lacquer underline underline-offset-4">{advanced ? "Hide extra personalization" : "Personalize colors, charm, song or shagun"}</button>
+              {advanced && <div className="space-y-6 border-t border-ink/10 pt-6">
+                <div className="grid grid-cols-2 gap-5"><div><label className="text-sm font-medium text-ink">Thread color</label><Swatches colors={THREAD_SWATCHES} value={threadColor} onChange={setThreadColor} /></div><div><label className="text-sm font-medium text-ink">Bead color</label><Swatches colors={BEAD_SWATCHES} value={beadColor} onChange={setBeadColor} /></div></div>
+                <div><label className="text-sm font-medium text-ink">Charm</label><div className="mt-2 flex flex-wrap gap-2">{CHARMS.map((item) => <button key={item.id} type="button" onClick={() => setCharm(item.id)} className={`rounded-full border px-4 py-2 text-sm ${charm === item.id ? "border-lacquer bg-lacquer-soft text-lacquer" : "border-ink/10 bg-white text-ink/70"}`}>{CHARM_ICON[item.id]} {item.label}</button>)}</div>{charm === "initial" && <input aria-label="Rakhi initial" maxLength={1} value={name} onChange={(e) => setName(e.target.value.slice(0, 1))} className="mt-3 w-16 rounded-full border border-ink/15 bg-white px-3 py-2 text-center" />}</div>
+                <div><label htmlFor="spotify" className="block text-sm font-medium text-ink">Spotify song <span className="font-normal text-ink/50">(optional)</span></label><input id="spotify" type="url" value={spotifyInput} onChange={(e) => { const value = e.target.value; setSpotifyInput(value); const embed = toSpotifyEmbedUrl(value); setSpotifyEmbedUrl(embed); if (embed) { setSongName(null); setSongDataUrl(null); setError(null); } }} onBlur={() => spotifyInput.trim() && !toSpotifyEmbedUrl(spotifyInput) && setError("That does not look like a Spotify link.")} placeholder="Paste a Spotify link" className="mt-2 block w-full rounded-[1rem] border border-ink/15 bg-white px-4 py-3 text-sm" /></div>
+                <div><input ref={songInput} type="file" accept="audio/*" className="sr-only" onChange={async (e) => { const file = e.target.files?.[0]; e.target.value = ""; if (!file) return; if (file.size > MAX_SONG_BYTES) { setError("Keep the audio file under 2.5 MB."); return; } try { setSongDataUrl(await fileToDataUrl(file)); setSongName(file.name); setSpotifyInput(""); setSpotifyEmbedUrl(null); } catch { setError("We couldn't read that audio file."); } }} /><button type="button" onClick={() => songInput.current?.click()} className="rounded-full border border-lacquer/25 px-4 py-2 text-sm text-lacquer">{songName ? "Change audio file" : "Attach audio file"}</button><p className="mt-2 text-xs text-ink/50">Uploaded audio stays on this device. Use Spotify if the song should travel with the link.</p></div>
+                <div><label htmlFor="upi" className="block text-sm font-medium text-ink">UPI for shagun <span className="font-normal text-ink/50">(optional)</span></label><input id="upi" value={upiId} onChange={(e) => setUpiId(e.target.value)} placeholder="name@upi or 9876543210" className="mt-2 block w-full rounded-[1rem] border border-ink/15 bg-white px-4 py-3 text-sm" /></div>
+              </div>}
+            </div>}
+
+            {error && <p role="alert" className="mt-5 text-sm font-medium text-lacquer">{error}</p>}
+            <div className="mt-8 flex items-center gap-3">
+              {step > 1 && <button type="button" onClick={() => { setError(null); setStep((value) => value - 1); }} className="rounded-full border border-ink/15 px-5 py-3 text-sm text-ink hover:bg-white">Back</button>}
+              {step < 4 ? <button type="button" onClick={advance} className="btn-pill flex-1">Continue</button> : <button type="button" onClick={handleGenerate} disabled={submitting} className="btn-pill flex-1 disabled:opacity-60">{submitting ? "Creating your link..." : "Create Rakhi link"}</button>}
+            </div>
+          </section>
         </div>
       </main>
       <Footer />

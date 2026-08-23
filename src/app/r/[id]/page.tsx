@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { getRakhi, type RakhiConfig } from "@/lib/rakhi";
@@ -28,6 +28,7 @@ const DEMO: RakhiConfig = {
 
 export default function ReceivePage() {
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const [rakhi, setRakhi] = useState<RakhiConfig | null | undefined>(undefined);
 
   useEffect(() => {
@@ -57,5 +58,5 @@ export default function ReceivePage() {
     );
   }
 
-  return <GiftBoxReveal rakhi={rakhi} />;
+  return <GiftBoxReveal rakhi={rakhi} autoPlay={params.id === "demo" && searchParams.get("preview") === "1"} />;
 }

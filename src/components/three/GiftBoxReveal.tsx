@@ -11,6 +11,7 @@ import { SpotlightRig } from "./lights";
 import type { RakhiConfig } from "@/lib/rakhi";
 import { loadSong } from "@/lib/songStore";
 import WristPhotoStudio from "@/components/photo/WristPhotoStudio";
+import { trackFunnel } from "@/lib/analytics";
 
 type RevealLayout = {
   boxScale: number;
@@ -272,7 +273,7 @@ function buildUpiLink(upiId: string): string {
   return `upi://pay?pa=${pa}&tn=Shagun%20for%20Raksha%20Bandhan&cu=INR`;
 }
 
-export default function GiftBoxReveal({ rakhi }: { rakhi: RakhiConfig }) {
+export default function GiftBoxReveal({ rakhi, autoPlay = false }: { rakhi: RakhiConfig; autoPlay?: boolean }) {
   const isMobile = useIsMobile();
   const layout = isMobile ? MOBILE_LAYOUT : DESKTOP_LAYOUT;
 
@@ -287,7 +288,20 @@ export default function GiftBoxReveal({ rakhi }: { rakhi: RakhiConfig }) {
   const [typingDone, setTypingDone] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const spotifyRef = useRef<HTMLIFrameElement | null>(null);
+  const revealTracked = useRef(false);
   const hasSong = Boolean(rakhi.songName || rakhi.spotifyEmbedUrl);
+
+  useEffect(() => {
+    if (autoPlay) return;
+    trackFunnel("gift_loaded", {
+      recipient_type: rakhi.recipientType,
+      template: rakhi.style,
+      source: rakhi.source || "shared_link",
+      has_song: hasSong,
+      has_upi: Boolean(rakhi.upiId),
+      is_recipient_loop: rakhi.source === "recipient_loop",
+    });
+  }, [autoPlay, rakhi.recipientType, rakhi.style, rakhi.source, rakhi.upiId, hasSong]);
 
   useEffect(() => {
     if (!rakhi.songName) return;
@@ -300,6 +314,7 @@ export default function GiftBoxReveal({ rakhi }: { rakhi: RakhiConfig }) {
 
   const openGift = useCallback(() => {
     setPlay(true);
+    if (!autoPlay) trackFunnel("gift_opened", { recipient_type: rakhi.recipientType, template: rakhi.style, source: rakhi.source || "shared_link" });
 
     const audio = audioRef.current;
     if (audio && songUrl) {
@@ -314,7 +329,13 @@ export default function GiftBoxReveal({ rakhi }: { rakhi: RakhiConfig }) {
         frame.src = spotifyAutoplaySrc(rakhi.spotifyEmbedUrl);
       }
     }
-  }, [rakhi.spotifyEmbedUrl, songUrl]);
+  }, [autoPlay, rakhi.recipientType, rakhi.source, rakhi.spotifyEmbedUrl, rakhi.style, songUrl]);
+
+  useEffect(() => {
+    if (!autoPlay) return;
+    const timer = window.setTimeout(openGift, 650);
+    return () => window.clearTimeout(timer);
+  }, [autoPlay, openGift]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -387,7 +408,13 @@ export default function GiftBoxReveal({ rakhi }: { rakhi: RakhiConfig }) {
           rakhi={rakhi}
           play={play}
           layout={layout}
-          onRevealed={() => setRevealed(true)}
+          onRevealed={() => {
+            setRevealed(true);
+            if (!autoPlay && !revealTracked.current) {
+              revealTracked.current = true;
+              trackFunnel("gift_revealed", { recipient_type: rakhi.recipientType, template: rakhi.style, source: rakhi.source || "shared_link" });
+            }
+          }}
         />
       </div>
 
@@ -398,10 +425,11 @@ export default function GiftBoxReveal({ rakhi }: { rakhi: RakhiConfig }) {
           <div className="flex-1 flex flex-col items-center justify-end px-5 pb-safe gap-4" style={{ paddingBottom: "max(5rem, env(safe-area-inset-bottom, 1.25rem) + 4rem)" }}>
             <div className="flex flex-col items-center gap-1.5 pointer-events-auto text-center hero-shadow">
               <p className="text-cream-ink text-base sm:text-xl font-medium drop-shadow leading-snug">
-                {rakhi.name ? (
-                  <><span className="font-display italic text-lacquer-bright">{rakhi.name}</span>, you</>
+                {rakhi.recipientName || rakhi.name ? (
+                  <><span className="font-display italic text-lacquer-bright">{rakhi.recipientName || rakhi.name}</span>, you</>
                 ) : "You"} received a rakhi
               </p>
+              {rakhi.senderName && <p className="text-cream-ink/60 text-xs sm:text-sm">Made for you by {rakhi.senderName}</p>}
               {hasSong && (
                 <p className="text-cream-ink/60 text-xs sm:text-sm font-display italic">
                   🎵 Includes a song
@@ -461,7 +489,10 @@ export default function GiftBoxReveal({ rakhi }: { rakhi: RakhiConfig }) {
                 )}
                 <button
                   type="button"
-                  onClick={() => setAccepted(true)}
+                  onClick={() => {
+                    setAccepted(true);
+                    trackFunnel("gift_accepted", { recipient_type: rakhi.recipientType, template: rakhi.style, source: rakhi.source || "shared_link" });
+                  }}
                   className="btn-pill w-full sm:w-auto inline-flex items-center justify-center gap-2 text-center transition active:scale-95 touch-manipulation min-h-[48px]"
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -485,6 +516,7 @@ export default function GiftBoxReveal({ rakhi }: { rakhi: RakhiConfig }) {
                 {rakhi.upiId && (
                   <a
                     href={buildUpiLink(rakhi.upiId)}
+                    onClick={() => trackFunnel("shagun_clicked", { recipient_type: rakhi.recipientType, template: rakhi.style, source: rakhi.source || "shared_link" })}
                     className="btn-pill inline-flex items-center justify-center gap-2.5 text-center transition active:scale-95 touch-manipulation min-h-[52px] text-sm font-semibold"
                   >
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -495,7 +527,10 @@ export default function GiftBoxReveal({ rakhi }: { rakhi: RakhiConfig }) {
                 )}
                 <button
                   type="button"
-                  onClick={() => setShowPhotoStudio(true)}
+                  onClick={() => {
+                    setShowPhotoStudio(true);
+                    trackFunnel("wrist_photo_started", { recipient_type: rakhi.recipientType, template: rakhi.style, source: rakhi.source || "shared_link" });
+                  }}
                   className="inline-flex items-center justify-center gap-2.5 rounded-full bg-cream-ink/12 border border-cream-ink/20 text-cream-ink text-sm font-medium px-5 min-h-[52px] hover:bg-cream-ink/18 active:bg-cream-ink/25 transition touch-manipulation"
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -525,13 +560,14 @@ export default function GiftBoxReveal({ rakhi }: { rakhi: RakhiConfig }) {
                   </button>
                 )}
                 <a
-                  href="/create"
-                  className="inline-flex items-center justify-center gap-2.5 rounded-full border border-cream-ink/15 text-cream-ink/50 text-sm px-5 min-h-[48px] hover:bg-cream-ink/8 active:bg-cream-ink/15 transition text-center touch-manipulation"
+                  href={`/create?style=${encodeURIComponent(rakhi.style)}&source=recipient_loop${rakhi.id.startsWith("v1_") || rakhi.id.startsWith("v2_") ? "" : `&parent=${encodeURIComponent(rakhi.id)}`}`}
+                  onClick={() => trackFunnel("recipient_create_clicked", { recipient_type: rakhi.recipientType, template: rakhi.style, source: "recipient_loop", is_recipient_loop: true })}
+                  className="btn-pill inline-flex items-center justify-center gap-2.5 text-sm min-h-[52px] transition active:scale-95 touch-manipulation"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                     <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
                   </svg>
-                  Design your rakhi
+                  Create one for your sibling
                 </a>
               </div>
               {rakhi.upiId && (

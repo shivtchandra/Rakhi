@@ -45,4 +45,5 @@ node_modules/
 # local rakhi store (dev fallback without Firebase)
 .data/
 .claude/
+.mini/
 .img2threejs/

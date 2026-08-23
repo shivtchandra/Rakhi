@@ -13,6 +13,11 @@ export type RakhiConfig = {
   charm: Charm;
   name: string;
   message: string;
+  recipientName?: string;
+  recipientType?: "brother" | "sister" | "cousin" | "chosen-sibling";
+  senderName?: string;
+  source?: string;
+  parentRakhiId?: string;
   /** Present when a local audio file was attached (audio lives in IndexedDB). */
   songName?: string;
   /** Spotify embed URL when a Spotify link was pasted. */
@@ -27,7 +32,17 @@ const WRITE_TIMEOUT_MS = 8000;
 const EMBED_V1 = "v1_";
 const EMBED_V2 = "v2_";
 
-const STYLES_ORDER = ["traditional", "minimal", "cute", "premium", "festive"] as const;
+const STYLES_ORDER = [
+  "traditional",
+  "minimal",
+  "cute",
+  "premium",
+  "festive",
+  "silk",
+  "rudraksha",
+  "silver",
+  "royal",
+] as const;
 const CHARMS_ORDER = ["om", "heart", "initial", "gem"] as const;
 
 type Stored = Omit<RakhiConfig, "createdAt">;
@@ -127,7 +142,7 @@ function expandSpotify(compact: string): string | null {
 }
 
 /**
- * Compact v2: styleIdx␟thread␟bead␟charmIdx␟name␟message␟spotify␟songFlag
+ * Compact v2: legacy fields followed by optional recipient and attribution fields.
  * Spotify is track-id only (not full embed URL) — that was most of the old length.
  */
 export function encodeRakhiId(payload: Stored): string {
@@ -144,6 +159,11 @@ export function encodeRakhiId(payload: Stored): string {
     spotify,
     payload.songName ? "1" : "",
     payload.upiId ?? "",
+    payload.recipientName ?? "",
+    payload.recipientType ?? "",
+    payload.senderName ?? "",
+    payload.source ?? "",
+    payload.parentRakhiId ?? "",
   ];
   while (parts.length > 6 && parts[parts.length - 1] === "") parts.pop();
   return EMBED_V2 + toBase64Url(parts.join("\u001f"));
@@ -153,7 +173,7 @@ function decodeV2(body: string): Stored | null {
   try {
     const parts = fromBase64Url(body).split("\u001f");
     if (parts.length < 6) return null;
-    const [sRaw, t, b, cRaw, n, m, sp = "", sn = "", upi = ""] = parts;
+    const [sRaw, t, b, cRaw, n, m, sp = "", sn = "", upi = "", recipientName = "", recipientType = "", senderName = "", source = "", parentRakhiId = ""] = parts;
     const sIdx = Number(sRaw);
     const cIdx = Number(cRaw);
     if (!Number.isInteger(sIdx) || sIdx < 0 || sIdx >= STYLES_ORDER.length) return null;
@@ -172,6 +192,13 @@ function decodeV2(body: string): Stored | null {
       ...(sn === "1" ? { songName: "song" } : {}),
       ...(spotifyEmbedUrl ? { spotifyEmbedUrl } : {}),
       ...(upi ? { upiId: upi } : {}),
+      ...(recipientName ? { recipientName } : {}),
+      ...(["brother", "sister", "cousin", "chosen-sibling"].includes(recipientType)
+        ? { recipientType: recipientType as RakhiConfig["recipientType"] }
+        : {}),
+      ...(senderName ? { senderName } : {}),
+      ...(source ? { source } : {}),
+      ...(parentRakhiId ? { parentRakhiId } : {}),
     };
   } catch {
     return null;
@@ -204,30 +231,6 @@ export function decodeRakhiId(id: string): Stored | null {
   return null;
 }
 
-async function saveViaApi(payload: Stored): Promise<boolean> {
-  try {
-    const res = await fetch("/api/rakhi", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...payload, createdAt: new Date().toISOString() }),
-    });
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
-
-async function loadViaApi(id: string): Promise<Stored | null> {
-  try {
-    const res = await fetch(`/api/rakhi/${id}`);
-    if (res.status === 404) return null;
-    if (!res.ok) return null;
-    return (await res.json()) as Stored;
-  } catch {
-    return null;
-  }
-}
-
 export type CreateRakhiInput = Omit<RakhiConfig, "id" | "createdAt"> & {
   songDataUrl?: string;
 };
@@ -249,7 +252,6 @@ export async function createRakhi(data: CreateRakhiInput): Promise<string> {
       await saveSong(id, rest.songName, songDataUrl);
     }
     writeLocal(id, payload);
-    void saveViaApi(payload);
     return id;
   }
 
@@ -296,9 +298,6 @@ export async function getRakhi(id: string): Promise<RakhiConfig | null> {
       console.warn("Firebase read failed, trying local:", err);
     }
   }
-
-  const fromApi = await loadViaApi(id);
-  if (fromApi) return fromApi;
 
   const local = readLocal()[id];
   return local ?? null;

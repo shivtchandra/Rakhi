@@ -30,6 +30,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.8,
     },
+    ...["rakhi-for-brother", "rakhi-for-sister", "long-distance-rakhi"].map((slug) => ({
+      url: `${BASE_URL}/${slug}`,
+      lastModified: new Date(),
+      changeFrequency: "weekly" as const,
+      priority: 0.9,
+    })),
     ...STYLES.map((s) => ({
       url: `${BASE_URL}/gallery/${s.id}`,
       lastModified: new Date(),

@@ -57,7 +57,7 @@ export default function SendRakhiWithoutShippingPage() {
           </p>
           <h1 className="font-display text-4xl sm:text-5xl leading-tight">{TITLE}</h1>
           <p className="mt-6 text-lg text-ink/70 leading-relaxed">
-            Yes. You can design a 3D rakhi and send it as a private gift-box link in under two
+            Yes. You can design a 3D rakhi and send it as a personal gift-box link in under two
             minutes — no courier, no cutoff date, no tracking number to refresh at midnight.
           </p>
 
@@ -75,7 +75,7 @@ export default function SendRakhiWithoutShippingPage() {
           <p className="text-ink/70 leading-relaxed">
             You design a rakhi in a real 3D builder — thread colour, stones, charm — and it turns
             in your hands as you build it, the same way you'd turn a real one over to check the
-            back. Add a short message, and the site generates one private link, not a public post.
+            back. Add a short message, and the site generates one personal link, not a public post.
             You send that link on WhatsApp the way you'd send anything else.
           </p>
           <p className="mt-4 text-ink/70 leading-relaxed">
