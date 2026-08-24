@@ -134,7 +134,7 @@ export default function Home() {
             </Link>
           </nav>
 
-          <div className="flex-1 grid items-center gap-8 pt-4 pb-10 lg:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[minmax(0,1fr)_310px]">
+          <div className="flex-1 flex items-center pt-4 pb-10">
             <div className="max-w-xl flex flex-col items-start text-left hero-shadow">
               <p className="text-[10px] sm:text-xs tracking-[0.24em] sm:tracking-[0.28em] uppercase text-lacquer-bright mb-4 sm:mb-5 -ml-[0.14em]">
                 Raksha Bandhan 2026 · Aug 28
@@ -160,14 +160,34 @@ export default function Home() {
                 <ShareSiteButton className="text-cream-ink/60 hover:text-cream-ink mt-1" />
               </div>
             </div>
-            <div className="hidden lg:block justify-self-end overflow-hidden rounded-[2rem] border border-cream-ink/20 bg-plum shadow-2xl" aria-label="Live preview of the Rakhi gift opening">
-              <iframe src="/r/demo?preview=1" title="Rakhi gift opening preview" tabIndex={-1} className="pointer-events-none h-[500px] w-[280px] xl:w-[310px]" />
-            </div>
           </div>
         </div>
       </section>
 
-      {/* 2. HOW IT WORKS - vertical numbered list */}
+      {/* 2. DEMO PREVIEW */}
+      <section className="page-shell py-16 sm:py-24">
+        <Reveal>
+          <div className="mx-auto grid max-w-4xl items-center gap-10 md:grid-cols-[minmax(0,1fr)_320px] md:gap-16">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.22em] text-lacquer">The surprise they receive</p>
+              <h2 className="mt-4 max-w-xl font-display text-4xl leading-tight sm:text-5xl">
+                A small moment that feels close.
+              </h2>
+              <p className="mt-5 max-w-lg text-[15px] leading-relaxed text-ink/65">
+                Your sibling opens the link, reveals the Rakhi, reads your message, and can wear it on their wrist for a photo.
+              </p>
+              <Link href="/r/demo" onClick={() => trackFunnel("demo_opened", { source: "homepage_demo_section" })} className="mt-7 inline-flex items-center text-sm font-medium text-lacquer link-underline">
+                Open the full demo
+              </Link>
+            </div>
+            <div className="mx-auto overflow-hidden rounded-[2rem] border border-ink/10 bg-plum shadow-xl shadow-plum/15" aria-label="Live preview of the Rakhi gift opening">
+              <iframe src="/r/demo?preview=1" title="Rakhi gift opening preview" tabIndex={-1} className="pointer-events-none h-[568px] w-[320px]" />
+            </div>
+          </div>
+        </Reveal>
+      </section>
+
+      {/* 3. HOW IT WORKS - vertical numbered list */}
       <section className="page-shell py-20 sm:py-28">
         <script
           type="application/ld+json"
